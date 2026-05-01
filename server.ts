@@ -70,6 +70,36 @@ async function sendVerificationEmail(email: string, code: string) {
   }
 }
 
+async function sendResetPasswordEmail(email: string, code: string) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+    console.warn("⚠️ SMTP credentials not set. Reset code:", code);
+    return;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `"NewsHub Team" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Reset your NewsHub password",
+      text: `Your password reset code is: ${code}`,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #2563eb;">Reset your password</h2>
+          <p>We received a request to reset your password. Use the code below to proceed:</p>
+          <div style="font-size: 24px; font-weight: bold; color: #2563eb; padding: 10px; background: #f3f4f6; text-align: center; border-radius: 5px; margin: 20px 0;">
+            ${code}
+          </div>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+          <p>Best regards,<br>The NewsHub Team</p>
+        </div>
+      `,
+    });
+    console.log(`✅ Reset email sent to: ${email}`);
+  } catch (error) {
+    console.error("❌ Failed to send reset email:", error);
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
@@ -365,6 +395,93 @@ async function startServer() {
     } catch (err) {
       console.error("Verification error:", err);
       res.status(500).json({ detail: "Internal server error during verification" });
+    }
+  });
+
+  app.post("/api/resend-code", async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ detail: "Email is required" });
+    }
+
+    try {
+      const rows: any = await query("SELECT * FROM users WHERE email = ?", [email]);
+      const user = rows && rows[0];
+
+      if (!user) {
+        return res.status(404).json({ detail: "User not found" });
+      }
+
+      if (user.is_verified) {
+        return res.status(400).json({ detail: "Account already verified" });
+      }
+
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      await query("UPDATE users SET verification_code = ? WHERE id = ?", [verificationCode, user.id]);
+      
+      await sendVerificationEmail(email, verificationCode);
+      res.json({ message: "Verification code sent" });
+    } catch (err) {
+      console.error("Resend code error:", err);
+      res.status(500).json({ detail: "Internal server error" });
+    }
+  });
+
+  app.post("/api/forgot-password", async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ detail: "Email is required" });
+    }
+
+    try {
+      const rows: any = await query("SELECT * FROM users WHERE email = ?", [email]);
+      const user = rows && rows[0];
+
+      if (!user) {
+        // Return success even if user not found for security
+        return res.json({ message: "If this email is registered, a reset code has been sent." });
+      }
+
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      await query("UPDATE users SET verification_code = ? WHERE id = ?", [resetCode, user.id]);
+      
+      await sendResetPasswordEmail(email, resetCode);
+      res.json({ message: "If this email is registered, a reset code has been sent." });
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      res.status(500).json({ detail: "Internal server error" });
+    }
+  });
+
+  app.post("/api/reset-password", async (req, res) => {
+    const { email, code, new_password } = req.body;
+    if (!email || !code || !new_password) {
+      return res.status(400).json({ detail: "Email, code, and new password are required" });
+    }
+
+    try {
+      const rows: any = await query("SELECT * FROM users WHERE email = ?", [email]);
+      const user = rows && rows[0];
+
+      if (!user) {
+        return res.status(404).json({ detail: "User not found" });
+      }
+
+      if (user.verification_code !== code) {
+        return res.status(400).json({ detail: "Invalid reset code" });
+      }
+
+      const hashedPassword = await bcrypt.hash(new_password, 10);
+      await query(
+        "UPDATE users SET hashed_password = ?, verification_code = NULL, is_verified = 1, status = 'active' WHERE id = ?",
+        [hashedPassword, user.id]
+      );
+      
+      console.log(`Password reset successfully for: ${email}`);
+      res.json({ message: "Password reset successfully" });
+    } catch (err) {
+      console.error("Reset password error:", err);
+      res.status(500).json({ detail: "Internal server error" });
     }
   });
 
