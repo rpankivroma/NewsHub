@@ -22,3 +22,14 @@ class User(UserBase):
 class UserVerify(BaseModel):
     email: EmailStr
     code: str
+
+class UserResendCode(BaseModel):
+    email: EmailStr
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
