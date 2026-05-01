@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import AuthModal from './components/AuthModal';
+import { AnimatePresence } from 'motion/react';
 import Home from './pages/Home';
 import ArticleDetail from './pages/ArticleDetail';
 import About from './pages/About';
@@ -101,11 +102,15 @@ export default function App() {
          </div>
       </footer>
 
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        onLoginSuccess={handleLoginSuccess}
-      />
+      <AnimatePresence>
+        {isAuthModalOpen && (
+          <AuthModal 
+            isOpen={isAuthModalOpen} 
+            onClose={() => setIsAuthModalOpen(false)} 
+            onLoginSuccess={handleLoginSuccess}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
