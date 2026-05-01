@@ -25,3 +25,15 @@ async def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.post("/verify-email", response_model=schemas.User)
 async def verify_email(verify_data: schemas.UserVerify, db: Session = Depends(get_db)):
     return await AuthService.verify_email(db, verify_data)
+
+@router.post("/resend-code")
+async def resend_code(data: schemas.UserResendCode, db: Session = Depends(get_db)):
+    return await AuthService.resend_verification_code(db, data.email)
+
+@router.post("/forgot-password")
+async def forgot_password(data: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    return await AuthService.forgot_password(db, data.email)
+
+@router.post("/reset-password")
+async def reset_password(data: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    return await AuthService.reset_password(db, data)
