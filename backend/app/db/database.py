@@ -4,35 +4,54 @@ from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Try to load .env from current directory or parent directory
+env_path = os.path.join(os.getcwd(), '.env')
+if not os.path.exists(env_path):
+    # Try one level up if not found in backend/
+    env_path = os.path.join(os.path.dirname(os.getcwd()), '.env')
+
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv() # Fallback to default search
 
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT", "3306")
+DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 
-if not all([DB_USER, DB_HOST, DB_NAME]):
-    # Note: DB_PASSWORD can be empty sometimes, so we don't strictly require it in the check
+# Default port if not specified or set to "None"
+if not DB_PORT or DB_PORT.lower() == "none" or DB_PORT == "":
+    DB_PORT = "3306"
+
+# Check if we have the minimum requirements for MySQL
+mysql_ready = all([DB_USER, DB_HOST, DB_NAME])
+
+if not mysql_ready:
+    print("--- Database Configuration Debug ---")
+    print(f"DB_USER: {'Set' if DB_USER else 'MISSING'}")
+    print(f"DB_HOST: {'Set' if DB_HOST else 'MISSING'}")
+    print(f"DB_NAME: {'Set' if DB_NAME else 'MISSING'}")
+    print(f"Working Directory: {os.getcwd()}")
+    print("------------------------------------")
     print("Warning: Missing database environment variables. Please check your .env file.")
 
 # We use pymysql as the driver for MySQL
-if all([DB_USER, DB_HOST, DB_NAME]):
-    if DB_PORT:
-        SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    else:
-        SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+if mysql_ready:
+    SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    print(f"🚀 Connecting to MySQL database: {DB_NAME} at {DB_HOST}")
 else:
     # Fallback to SQLite if MySQL env vars are not complete
     SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
-    if not os.path.exists("./sql_app.db"):
-        print("💡 MySQL variables missing. Falling back to local SQLite database: sql_app.db")
+    print("💡 MySQL variables missing. Falling back to local SQLite database: sql_app.db")
 
 # For SQLite during development if MySQL isn't available
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 else:
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    # pool_pre_ping helps with MySQL connection drops
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
