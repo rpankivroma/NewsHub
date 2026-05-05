@@ -9,31 +9,33 @@ import Donate from './pages/Donate';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import { Article, User } from './types';
-import { ARTICLES } from './constants';
 import { authService } from './services/authService';
+import { newsService } from './services/newsService';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+    const initApp = async () => {
       const token = authService.getToken();
-      if (token) {
-        try {
-          console.log('App initAuth: fetching user data');
-          const userData = await authService.getMe();
-          setUser(userData);
-        } catch (error) {
-          console.error("Auth init failed", error);
-        }
+      
+      try {
+        const [categoriesData] = await Promise.all([
+          newsService.getCategories(),
+          token ? authService.getMe().then(u => setUser(u)).catch(() => null) : Promise.resolve(null)
+        ]);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("App initialization failed", error);
       }
       setIsLoading(false);
     };
-    initAuth();
+    initApp();
   }, []);
 
   const handleArticleClick = (id: number) => {
@@ -57,8 +59,6 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  const activeArticle = ARTICLES.find(a => a.id === selectedArticleId);
-
   return (
     <div className="min-h-screen bg-[#FDFDFD] font-sans selection:bg-blue-100 selection:text-blue-900">
       <Navbar 
@@ -70,16 +70,17 @@ export default function App() {
             window.scrollTo(0, 0);
         }}
         currentPage={currentPage}
+        categories={categories}
       />
 
       <main className="pb-24">
         {currentPage === 'home' && <Home onArticleClick={handleArticleClick} />}
-        {currentPage === 'article' && activeArticle && (
-          <ArticleDetail article={activeArticle} onBack={() => setCurrentPage('home')} />
+        {currentPage === 'article' && selectedArticleId && (
+          <ArticleDetail articleId={selectedArticleId} onBack={() => setCurrentPage('home')} />
         )}
         {currentPage === 'about' && <About />}
         {currentPage === 'donate' && <Donate />}
-        {currentPage === 'profile' && <Profile user={user} />}
+        {currentPage === 'profile' && <Profile user={user} onUserUpdate={setUser} />}
         {currentPage === 'admin' && <Admin user={user} />}
       </main>
 
