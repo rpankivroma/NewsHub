@@ -1,140 +1,294 @@
 import React from 'react';
-import { Heart, CreditCard, Paintbrush, DollarSign, Bitcoin, Check } from 'lucide-react';
+import { Heart, CreditCard, Paintbrush, DollarSign, Bitcoin, Check, TrendingUp } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { newsService } from '../services/newsService';
 
 export default function Donate() {
+  const [settings, setSettings] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [selectedMethod, setSelectedMethod] = React.useState('card');
   const [selectedAmount, setSelectedAmount] = React.useState(25);
   const [customAmount, setCustomAmount] = React.useState('');
+  const [isDonating, setIsDonating] = React.useState(false);
+  const [donationSuccess, setDonationSuccess] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await newsService.getDonationSettings();
+        setSettings(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleDonate = async () => {
+    setIsDonating(true);
+    try {
+      const response = await fetch('/api/donations/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: selectedAmount,
+          method: selectedMethod,
+          donor_email: 'demo@example.com' // Mock email
+        })
+      });
+      if (response.ok) {
+        setDonationSuccess(true);
+        // Refresh settings to show updated progress
+        const updatedSettings = await newsService.getDonationSettings();
+        setSettings(updatedSettings);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDonating(false);
+    }
+  };
+
+  if (isLoading) return <div className="py-24 text-center">Loading donation settings...</div>;
+  if (!settings) return <div className="py-24 text-center">Failed to load donation settings.</div>;
+
+  if (donationSuccess) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-32 text-center animate-in fade-in zoom-in duration-700">
+        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner shadow-green-100">
+          <Check className="w-12 h-12 text-green-600" />
+        </div>
+        <h2 className="text-4xl font-black text-gray-900 mb-4">Thank You!</h2>
+        <p className="text-gray-600 text-xl font-medium mb-10">
+          Your donation of <span className="text-green-600 font-black">${selectedAmount}</span> has been received. You're helping us make a difference.
+        </p>
+        <button 
+          onClick={() => {
+            setDonationSuccess(false);
+            setSelectedAmount(25);
+          }}
+          className="px-10 py-4 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-xl shadow-gray-200"
+        >
+          Make Another Donation
+        </button>
+      </div>
+    );
+  }
 
   const methods = [
-    { id: 'card', name: 'Card', icon: CreditCard },
-    { id: 'patreon', name: 'Patreon', icon: Paintbrush },
-    { id: 'paypal', name: 'PayPal', icon: DollarSign },
-    { id: 'crypto', name: 'Crypto', icon: Bitcoin },
+    { id: 'card', name: 'Card', icon: CreditCard, color: 'text-blue-600', border: 'border-blue-600', bg: 'bg-blue-50', iconLabel: '💳' },
+    { id: 'patreon', name: 'Patreon', icon: Paintbrush, color: 'text-orange-600', border: 'border-orange-600', bg: 'bg-orange-50/50', iconLabel: '🎨' },
+    { id: 'paypal', name: 'PayPal', icon: DollarSign, color: 'text-blue-800', border: 'border-blue-800', bg: 'bg-blue-50/50', iconLabel: '💼' },
+    { id: 'crypto', name: 'Crypto', icon: Bitcoin, color: 'text-purple-600', border: 'border-purple-600', bg: 'bg-purple-50/50', iconLabel: '₿' },
   ];
 
-  const amounts = [10, 25, 50, 100, 250];
+  const availableMethods = methods.filter(method => {
+    if (method.id === 'card') return true; // Card is always available for this demo
+    if (method.id === 'patreon') return settings.patreon_enabled;
+    if (method.id === 'paypal') return settings.paypal_enabled;
+    if (method.id === 'crypto') return settings.crypto_enabled;
+    return false;
+  });
 
-  const progress = 65;
-  const goal = 50000;
-  const current = 32450;
+  const progress = Math.min(100, Math.round((settings.current_amount / settings.goal_amount) * 100));
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-12 font-sans">
       <div className="text-center mb-12">
         <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
           <Heart className="w-10 h-10 text-red-500 fill-red-500" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Support Independent Journalism</h1>
-        <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-          Support independent journalism. Your donations help us continue delivering quality news coverage.
+        <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Support Our Journalism</h1>
+        <p className="text-gray-600 max-w-2xl mx-auto text-lg font-medium leading-relaxed">
+          {settings.campaign_description || "Help us keep independent news alive. Your contribution directly supports investigators and quality reporting."}
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden mb-12">
+      <div className="bg-white rounded-xl shadow-2xl shadow-gray-200/40 border border-gray-100 overflow-hidden mb-12 animate-in fade-in zoom-in duration-500">
         <div className="p-8 md:p-12">
-          {/* Progress Section */}
-          <div className="mb-12">
-            <div className="flex justify-between items-end mb-3">
-              <h3 className="font-bold text-gray-900">Campaign Progress</h3>
-              <span className="text-blue-600 font-bold">$32,450 / $50,000</span>
-            </div>
-            <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-600 rounded-full flex items-center justify-end px-2"
-                style={{ width: `${progress}%` }}
-              >
-                <span className="text-[10px] font-bold text-white leading-none">{progress}%</span>
+          {/* Campaign Progress Section */}
+          <div className="mb-10">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-700">Campaign Progress</h3>
+              <div className="flex items-center gap-1">
+                <span className="text-[#3b59ff] text-xl font-black">${settings.current_amount.toLocaleString()}</span>
+                <span className="text-gray-400 font-bold">/</span>
+                <span className="text-[#3b59ff] text-xl font-black">${settings.goal_amount.toLocaleString()}</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-3 font-medium flex items-center gap-1.5">
-               <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
-               {progress}% of our goal reached
-            </p>
+            
+            <div className="relative h-4 w-full bg-gray-100 rounded-full overflow-visible mb-3">
+              <div 
+                className="absolute top-0 left-0 h-full bg-[#3b59ff] rounded-full transition-all duration-1000"
+                style={{ width: `${progress}%` }}
+              >
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-[#3b59ff] text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-10">
+                  {progress}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+              <TrendingUp className="w-4 h-4" />
+              <span>{progress}% of our goal reached</span>
+            </div>
           </div>
 
-          {/* Method Selection */}
-          <div className="mb-12">
-            <h3 className="font-bold text-gray-900 mb-6">Choose Donation Method</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {methods.map(method => (
+          {/* Choose Donation Method */}
+          <div className="mb-10">
+            <h3 className="text-lg font-bold text-gray-800 mb-6">Choose Donation Method</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {availableMethods.map(method => (
                 <button
                   key={method.id}
                   onClick={() => setSelectedMethod(method.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all gap-3",
+                    "flex items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 h-20 group relative",
                     selectedMethod === method.id 
-                      ? "bg-blue-50 border-blue-600 text-blue-600 shadow-md shadow-blue-50" 
+                      ? "border-[#3b59ff] bg-[#f0f3ff] text-[#3b59ff]" 
                       : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
                   )}
                 >
-                  <method.icon className={cn("w-6 h-6", selectedMethod === method.id ? "text-blue-600" : "text-gray-400")} />
-                  <span className="text-sm font-bold">{method.name}</span>
+                  <span className="text-xl group-hover:scale-125 transition-transform">{method.iconLabel}</span>
+                  <span className="text-lg font-bold">{method.name}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Amount Selection */}
-          <div className="mb-12">
-            <h3 className="font-bold text-gray-900 mb-6">Select Amount</h3>
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-              {amounts.map(amount => (
-                <button
-                  key={amount}
-                  onClick={() => {
-                    setSelectedAmount(amount);
-                    setCustomAmount('');
-                  }}
-                  className={cn(
-                    "py-4 rounded-xl border-2 font-bold text-lg transition-all",
-                    (selectedAmount === amount && !customAmount)
-                      ? "bg-blue-50 border-blue-600 text-blue-600" 
-                      : "bg-white border-gray-100 text-gray-600 hover:border-gray-300"
-                  )}
+          {/* Content Area */}
+          <div className="space-y-10">
+            {selectedMethod === 'card' && (
+              <div className="animate-in fade-in duration-500 space-y-10">
+                {/* Select Amount */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-6">Select Amount</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {[10, 25, 50, 100, 250].map(amount => (
+                      <button
+                        key={amount}
+                        onClick={() => {
+                          setSelectedAmount(amount);
+                          setCustomAmount('');
+                        }}
+                        className={cn(
+                          "py-4 rounded-xl border-2 font-bold text-lg transition-all",
+                          (selectedAmount === amount && !customAmount)
+                            ? "border-[#3b59ff] bg-[#f0f3ff] text-[#3b59ff]" 
+                            : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
+                        )}
+                      >
+                        ${amount}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Amount */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Custom Amount</h3>
+                  <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                    <input 
+                      type="number"
+                      placeholder="Enter custom amount"
+                      value={customAmount}
+                      onChange={(e) => {
+                        setCustomAmount(e.target.value);
+                        setSelectedAmount(0);
+                      }}
+                      className="w-full pl-10 pr-6 py-5 bg-white border-2 border-gray-100 rounded-xl outline-none focus:border-[#3b59ff] transition-all text-lg font-medium placeholder:text-gray-300"
+                    />
+                  </div>
+                </div>
+
+                {/* Contribution Summary */}
+                <div className="p-8 bg-[#f3f6ff] rounded-xl border border-blue-50">
+                   <p className="text-[#3b59ff] text-lg font-medium">Your contribution: <span className="text-3xl font-black ml-1">${customAmount || selectedAmount}</span></p>
+                </div>
+
+                {/* Donate Button */}
+                <button 
+                  disabled={isDonating || (!selectedAmount && !customAmount)}
+                  onClick={handleDonate}
+                  className="w-full py-5 bg-[#3b59ff] text-white text-xl font-bold rounded-xl hover:bg-[#2a45e6] shadow-xl shadow-blue-100 transition-all active:scale-[0.98] disabled:opacity-50"
                 >
-                  ${amount}
+                  {isDonating ? 'Processing...' : `Donate $${customAmount || selectedAmount}`}
                 </button>
-              ))}
-            </div>
-            <div className="relative">
-               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
-               <input 
-                 type="number" 
-                 placeholder="Enter custom amount"
-                 value={customAmount}
-                 onChange={(e) => {
-                    setCustomAmount(e.target.value);
-                    setSelectedAmount(0);
-                 }}
-                 className="w-full pl-10 pr-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-blue-600 focus:bg-white transition-all text-lg font-bold placeholder:font-medium"
-               />
-            </div>
+              </div>
+            )}
+
+            {selectedMethod === 'patreon' && settings.patreon_enabled && (
+              <div className="animate-in fade-in duration-500">
+                <div className="p-10 bg-orange-50/50 rounded-xl border border-orange-100">
+                  <h3 className="text-2xl font-black text-[#e85b19] mb-4">Support us on Patreon</h3>
+                  <p className="text-orange-800 text-lg mb-8 leading-relaxed max-w-2xl font-medium">
+                    Become a patron and get exclusive benefits including early access to articles and behind-the-scenes content.
+                  </p>
+                  <a 
+                    href={settings.patreon_url} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-[#e85b19] text-white text-xl font-bold rounded-xl hover:bg-[#ff424d] transition-all shadow-lg shadow-orange-100"
+                  >
+                    Visit our Patreon <Heart className="w-6 h-6" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {selectedMethod === 'paypal' && settings.paypal_enabled && (
+              <div className="animate-in fade-in duration-500">
+                <div className="p-10 bg-blue-50/30 rounded-xl border border-blue-100">
+                  <h3 className="text-2xl font-black text-[#003087] mb-4">Donate via PayPal</h3>
+                  <p className="text-blue-800 text-lg mb-8 leading-relaxed font-medium">
+                    Send your donation directly to our PayPal account: <span className="font-bold underline">{settings.paypal_email}</span>
+                  </p>
+                  <a 
+                    href={`https://paypal.me/${settings.paypal_email?.split('@')[0]}`}
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-3 px-10 py-4 bg-[#3b59ff] text-white text-xl font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                  >
+                    Donate with PayPal <Check className="w-6 h-6" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {selectedMethod === 'crypto' && settings.crypto_enabled && (
+              <div className="animate-in fade-in duration-500">
+                <div className="p-10 bg-purple-50/30 rounded-xl border border-purple-100">
+                  <h3 className="text-2xl font-black text-purple-900 mb-8">Donate with Cryptocurrency</h3>
+                  
+                  <div className="space-y-6">
+                    {settings.bitcoin_wallet && (
+                      <div>
+                        <label className="block text-sm font-bold text-purple-800 mb-2 uppercase tracking-wider">Bitcoin (BTC)</label>
+                        <div className="flex bg-white border border-purple-100 rounded-lg p-5 font-mono text-gray-700 text-sm shadow-sm">
+                           {settings.bitcoin_wallet}
+                        </div>
+                      </div>
+                    )}
+
+                    {settings.ethereum_wallet && (
+                      <div>
+                        <label className="block text-sm font-bold text-purple-800 mb-2 uppercase tracking-wider">Ethereum (ETH)</label>
+                        <div className="flex bg-white border border-purple-100 rounded-lg p-5 font-mono text-gray-700 text-sm shadow-sm">
+                           {settings.ethereum_wallet}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="p-6 bg-blue-50 rounded-2xl mb-8 border border-blue-100">
-             <p className="text-gray-600 font-medium">Your contribution: <span className="text-2xl font-bold text-blue-600">${customAmount || selectedAmount}</span></p>
-          </div>
-
-          <button className="w-full py-5 bg-blue-600 text-white text-xl font-bold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98]">
-            Donate ${customAmount || selectedAmount}
-          </button>
-          <p className="text-center text-xs text-gray-400 mt-6 font-medium">This is a demo. No actual payment processing occurs.</p>
+          <p className="text-center text-sm text-gray-400 mt-12 font-medium">This is a demo. No actual payment processing occurs.</p>
         </div>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-8">
-        {[
-          { title: "Why Donate?", text: "Your donations keep our journalism independent and free from corporate influence." },
-          { title: "Impact", text: "Every contribution helps us hire talented journalists and invest in quality reporting." },
-          { title: "Transparency", text: "We publish regular reports showing how donations are used to support our mission." }
-        ].map((item, i) => (
-          <div key={i} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <h4 className="font-bold text-gray-900 mb-4">{item.title}</h4>
-            <p className="text-sm text-gray-500 leading-relaxed">{item.text}</p>
-          </div>
-        ))}
       </div>
     </div>
   );
