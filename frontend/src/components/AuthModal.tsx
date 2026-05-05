@@ -105,7 +105,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
 
     return (
       <div className="p-10 flex flex-col items-center">
-        <div className="bg-blue-600 p-3 rounded-2xl mb-6 shadow-lg shadow-blue-200">
+        <div className="bg-blue-600 p-3 rounded-xl mb-6 shadow-lg shadow-blue-200">
           <Newspaper className="w-8 h-8 text-white" />
         </div>
         
@@ -118,7 +118,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
 
         <form onSubmit={handleSubmit} className="w-full space-y-4">
           {error && (
-            <div className={`p-3 text-sm rounded-xl border ${error.includes('successful') || error.includes('Registration successful') ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+            <div className={`p-3 text-sm rounded-lg border ${error.includes('successful') || error.includes('Registration successful') ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
               {error}
             </div>
           )}
@@ -132,7 +132,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Full Name"
                 required
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-gray-900 placeholder:text-gray-400"
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-gray-900 placeholder:text-gray-400"
               />
             </div>
           )}
@@ -157,7 +157,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
-              className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-gray-900 placeholder:text-gray-400"
+              className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-gray-900 placeholder:text-gray-400"
             />
             <button
               type="button"
@@ -184,7 +184,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           <button 
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-70"
+            className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-70"
           >
             {isLoading ? 'Processing...' : (mode === 'login' ? 'Sign In' : 'Sign Up')}
           </button>
@@ -221,7 +221,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative"
+        className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden relative"
       >
         <button 
           onClick={() => {
