@@ -45,7 +45,7 @@ export default function VerifyModal({ email, onClose, onSuccess, onBack }: Verif
 
   return (
     <div className="p-8 flex flex-col items-center">
-      <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+      <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-6 shadow-sm">
         <Lock className="w-8 h-8 text-blue-600" />
       </div>
       
@@ -56,7 +56,7 @@ export default function VerifyModal({ email, onClose, onSuccess, onBack }: Verif
 
       <form onSubmit={handleSubmit} className="w-full space-y-4">
         {error && (
-          <div className={`p-3 text-sm rounded-xl border ${error.includes('sent') ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+          <div className={`p-3 text-sm rounded-lg border ${error.includes('sent') ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
             {error}
           </div>
         )}
@@ -69,14 +69,14 @@ export default function VerifyModal({ email, onClose, onSuccess, onBack }: Verif
             placeholder="6-digit code"
             required
             autoFocus
-            className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-center text-2xl font-bold tracking-[0.5em] text-gray-900 placeholder:text-sm placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400"
+            className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-center text-2xl font-bold tracking-[0.5em] text-gray-900 placeholder:text-sm placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400"
           />
         </div>
 
         <button 
           type="submit"
           disabled={isLoading}
-          className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-70"
+          className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-70"
         >
           {isLoading ? 'Verifying...' : 'Verify Now'}
         </button>
