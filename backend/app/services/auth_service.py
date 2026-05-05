@@ -124,6 +124,11 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Email not verified. Please verify your email first."
             )
+        
+        # Update last login
+        from sqlalchemy.sql import func
+        user.last_login_at = func.now()
+        db.commit()
             
         return user
 
