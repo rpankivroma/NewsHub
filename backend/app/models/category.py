@@ -9,4 +9,4 @@ class Category(Base):
     name = Column(String(100), unique=True, index=True, nullable=False)
     description = Column(String(255))
 
-    articles = relationship("Article", back_populates="category")
+    articles = relationship("Article", back_populates="category_rel")
