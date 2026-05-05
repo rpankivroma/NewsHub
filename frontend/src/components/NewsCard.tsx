@@ -15,14 +15,14 @@ export default function NewsCard({ article, variant = 'small', onClick }: NewsCa
   return (
     <div 
       className={cn(
-        "group cursor-pointer bg-white rounded-2xl overflow-hidden transition-all duration-300",
+        "group cursor-pointer bg-white rounded-xl overflow-hidden transition-all duration-300",
         isLarge ? "flex flex-col h-full" : "flex flex-col border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1"
       )}
       onClick={() => onClick?.(article.id)}
     >
       <div className={cn("relative overflow-hidden", isLarge ? "aspect-[16/9]" : "aspect-[3/2]")}>
         <img 
-          src={article.imageUrl} 
+          src={article.image_url || article.imageUrl} 
           alt={article.title}
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
