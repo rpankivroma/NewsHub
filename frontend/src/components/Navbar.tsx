@@ -8,14 +8,11 @@ interface NavbarProps {
   onLogout: () => void;
   onPageChange: (page: string) => void;
   currentPage: string;
+  categories: any[];
 }
 
-export default function Navbar({ onLoginClick, user, onLogout, onPageChange, currentPage }: NavbarProps) {
+export default function Navbar({ onLoginClick, user, onLogout, onPageChange, currentPage, categories }: NavbarProps) {
   const [isTopicsOpen, setIsTopicsOpen] = React.useState(false);
-
-  const topics = [
-    'Technology', 'Business', 'Science', 'Health', 'Sports', 'Environment', 'Politics', 'Entertainment', 'World'
-  ];
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 shadow-sm">
@@ -52,18 +49,21 @@ export default function Navbar({ onLoginClick, user, onLogout, onPageChange, cur
                 className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2"
                 onMouseLeave={() => setIsTopicsOpen(false)}
               >
-                {topics.map(topic => (
+                {categories.map(category => (
                   <button 
-                    key={topic}
+                    key={category.id}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
                     onClick={() => {
                         setIsTopicsOpen(false);
                         onPageChange('home'); // or filter by topic
                     }}
                   >
-                    {topic}
+                    {category.name}
                   </button>
                 ))}
+                {categories.length === 0 && (
+                  <p className="px-4 py-2 text-xs text-gray-400 italic">No topics available</p>
+                )}
               </div>
             )}
           </div>
