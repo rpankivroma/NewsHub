@@ -16,9 +16,10 @@ class Article(Base):
     category_id = Column(Integer, ForeignKey("categories.id"))
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
+    views = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    author = relationship("User", back_populates="articles")
-    category = relationship("Category", back_populates="articles")
+    user_author = relationship("User", back_populates="articles")
+    category_rel = relationship("Category", back_populates="articles")
     comments = relationship("Comment", back_populates="article")
