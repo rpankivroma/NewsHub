@@ -15,11 +15,14 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     status = Column(String(50), default="active") # active, blocked, pending
     interests = Column(Text) # JSON string of interests
+    tags = Column(Text) # Comma separated category names or JSON
+    newsletter_subscribed = Column(Boolean, default=False, nullable=False)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
     
     # Email verification fields
     is_verified = Column(Boolean, default=False)
     verification_code = Column(String(10), nullable=True)
 
-    articles = relationship("Article", back_populates="author")
+    articles = relationship("Article", back_populates="user_author")
     comments = relationship("Comment", back_populates="user")
