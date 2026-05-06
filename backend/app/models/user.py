@@ -26,3 +26,6 @@ class User(Base):
 
     articles = relationship("Article", back_populates="user_author")
     comments = relationship("Comment", back_populates="user")
+    saved_articles = relationship("Article", secondary="bookmarks", back_populates="saved_by")
+    liked_articles = relationship("Article", secondary="article_likes", back_populates="liked_by")
+    disliked_articles = relationship("Article", secondary="article_dislikes", back_populates="disliked_by")
