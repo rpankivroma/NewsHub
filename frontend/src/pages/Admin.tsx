@@ -8,7 +8,7 @@ import {
   TrendingUp, Clock, MessageSquare, Plus, Edit2, Trash2, Star,
   AlertCircle, Check, X, CheckCircle, Search, Filter, Upload, Image as ImageIcon, Loader2,
   Mail, Shield, Download, PieChart as PieChartIcon, UserCheck, Activity, Globe, Monitor, Smartphone,
-  ExternalLink, BarChart2, Briefcase, Settings, TrendingDown, Eye
+  ExternalLink, BarChart2, Briefcase, Settings, TrendingDown, Eye, Newspaper, User as UserIcon, DollarSign, Pencil
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -80,10 +80,7 @@ interface Stats {
 export default function Admin({ user }: AdminProps) {
   const [activeTab, setActiveTab] = React.useState('dashboard');
   const [stats, setStats] = React.useState<Stats | null>(null);
-  const [articles, setArticles] = React.useState<Article[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
-  const [users, setUsers] = React.useState<User[]>([]);
-  const [submissions, setSubmissions] = React.useState<any[]>([]);
   const [donations, setDonations] = React.useState<any[]>([]);
   const [donationSettings, setDonationSettings] = React.useState<any>(null);
   const [aboutPage, setAboutPage] = React.useState<any>(null);
@@ -103,15 +100,8 @@ export default function Admin({ user }: AdminProps) {
   // Article Management State
   const [isEditingArticle, setIsEditingArticle] = React.useState(false);
   const [currentArticle, setCurrentArticle] = React.useState<Partial<Article> | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [selectedCategory, setSelectedCategory] = React.useState('all');
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
-
-  // User Management State
-  const [userSearchQuery, setUserSearchQuery] = React.useState('');
-  const [selectedRole, setSelectedRole] = React.useState('all');
-  const [selectedStatus, setSelectedStatus] = React.useState('all');
 
   // New Category State
   const [newCategory, setNewCategory] = React.useState({ name: '', description: '' });
@@ -120,7 +110,6 @@ export default function Admin({ user }: AdminProps) {
   const handleToggleUserBlock = async (userId: number) => {
     try {
       await adminService.toggleUserStatus(userId);
-      fetchData();
     } catch (err: any) {
       alert(err.message);
     }
@@ -176,21 +165,11 @@ export default function Admin({ user }: AdminProps) {
         });
         setStats(data);
       } else if (activeTab === 'articles') {
-        const [articleData, categoryData] = await Promise.all([
-          adminService.getArticles(),
-          adminService.getCategories()
-        ]);
-        setArticles(articleData);
-        setCategories(categoryData);
-      } else if (activeTab === 'users') {
-        const data = await adminService.getUsers();
-        setUsers(data);
+        const data = await adminService.getCategories();
+        setCategories(data);
       } else if (activeTab === 'categories') {
         const data = await adminService.getCategories();
         setCategories(data);
-      } else if (activeTab === 'submissions') {
-        const data = await adminService.getSubmissions();
-        setSubmissions(data);
       } else if (activeTab === 'donations') {
         const data = await adminService.getDonations();
         setDonations(data);
@@ -211,7 +190,7 @@ export default function Admin({ user }: AdminProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, statsFilters.days, statsFilters.topLimit, statsFilters.categoryFilter]);
 
   React.useEffect(() => {
     fetchData();
@@ -327,12 +306,11 @@ export default function Admin({ user }: AdminProps) {
 
   const adminTabs = [
     { id: 'dashboard', label: 'Statistics', icon: BarChart2 },
-    { id: 'articles', label: 'Articles', icon: FileText },
-    { id: 'submissions', label: `Submissions ${stats?.system.pendingArticles ? `(${stats.system.pendingArticles})` : ''}`, icon: Send },
-    { id: 'users', label: 'Users', icon: UsersIcon },
-    { id: 'categories', label: 'Topics', icon: LayoutDashboard }, 
-    { id: 'donations', label: 'Donations', icon: Heart },
-    { id: 'about', label: 'About', icon: Edit2 },
+    { id: 'articles', label: 'Articles', icon: Newspaper },
+    { id: 'submissions', label: `Submissions ${stats?.system.pendingArticles ? `(${stats.system.pendingArticles})` : ''}`, icon: UserIcon },
+    { id: 'users', label: 'Users', icon: Shield },
+    { id: 'donations', label: 'Donations', icon: DollarSign },
+    { id: 'about', label: 'About', icon: Pencil },
   ];
 
   const downloadPDFReport = () => {
@@ -409,36 +387,26 @@ export default function Admin({ user }: AdminProps) {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-12">
-      <div className="flex items-center justify-between mb-12">
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Admin Panel</h1>
-        <div className="flex items-center gap-4">
-          {activeTab === 'dashboard' && (
-            <button 
-              onClick={downloadPDFReport}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-100 transition-all active:scale-95"
-            >
-              <Download className="w-5 h-5" /> Download Report
-            </button>
-          )}
-          {isLoading && <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />}
-        </div>
+    <div className="max-w-[1600px] mx-auto px-10 py-12">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-[#0f172a]">Admin Panel</h1>
+        {isLoading && <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />}
       </div>
 
-      <div className="flex gap-2 mb-12 overflow-x-auto pb-2">
+      <div className="flex gap-4 mb-10 overflow-x-auto pb-4 scrollbar-hide">
          {adminTabs.map(tab => (
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
+                "flex items-center gap-3 px-6 py-3.5 rounded-2xl font-semibold text-sm transition-all whitespace-nowrap",
                 activeTab === tab.id 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
-                  : "bg-white text-gray-500 border border-gray-100 hover:border-blue-200 hover:text-blue-600"
+                  ? "bg-[#3b82f6] text-white shadow-md shadow-blue-100" 
+                  : "bg-white text-gray-600 border border-gray-100 hover:bg-gray-50"
               )}
             >
-               <tab.icon className="w-4 h-4" />
-               {tab.label}
+               <tab.icon className="w-5 h-5 flex-shrink-0" />
+               <span>{tab.label}</span>
             </button>
          ))}
       </div>
@@ -469,14 +437,8 @@ export default function Admin({ user }: AdminProps) {
 
       {activeTab === 'articles' && (
         <ArticleManager 
-          articles={articles}
           categories={categories}
           user={user}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          handleNewArticle={handleNewArticle}
           isEditingArticle={isEditingArticle}
           setIsEditingArticle={setIsEditingArticle}
           currentArticle={currentArticle}
@@ -492,22 +454,14 @@ export default function Admin({ user }: AdminProps) {
 
       {activeTab === 'submissions' && (
         <SubmissionManager 
-          submissions={submissions}
           handleUpdateSubmission={handleUpdateSubmission}
-          fetchData={fetchData}
         />
       )}
 
       {activeTab === 'users' && (
         <UserManager 
-          users={users}
-          userSearchQuery={userSearchQuery}
-          setUserSearchQuery={setUserSearchQuery}
-          selectedRole={selectedRole}
-          setSelectedRole={setSelectedRole}
-          selectedStatus={selectedStatus}
-          setSelectedStatus={setSelectedStatus}
           handleToggleUserBlock={handleToggleUserBlock}
+          totalUsersCount={stats?.engagement.totalUsers || 0}
         />
       )}
 
