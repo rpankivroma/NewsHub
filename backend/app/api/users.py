@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import os
 import uuid
 import shutil
@@ -59,6 +59,9 @@ async def upload_profile_photo(
 
 @router.get("/me/personalized", response_model=List[schemas.Article])
 async def get_personalized_feed(
+    skip: int = 0,
+    limit: int = 10,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -69,11 +72,33 @@ async def get_personalized_feed(
         except:
             interests = [i.strip() for i in current_user.interests.split(",") if i.strip()]
     
-    return ArticleRepository.get_personalized_feed(db, interests)
+    tags = []
+    if current_user.tags:
+        try:
+            tags = json.loads(current_user.tags)
+        except:
+            tags = [t.strip() for t in current_user.tags.split(",") if t.strip()]
+    
+    return ArticleRepository.get_personalized_feed(db, interests, tags, skip=skip, limit=limit, search=search)
 
-@router.get("/me/submissions")
-async def get_my_submissions(
+@router.get("/me/saved", response_model=List[schemas.Article])
+async def get_my_saved_articles(
+    skip: int = 0,
+    limit: int = 20,
+    search: Optional[str] = None,
+    category_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    return SubmissionRepository.get_by_email(db, current_user.email)
+    return ArticleRepository.get_saved_articles(db, current_user.id, skip=skip, limit=limit, search=search, category_id=category_id)
+
+@router.get("/me/submissions")
+async def get_my_submissions(
+    skip: int = 0,
+    limit: int = 20,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return SubmissionRepository.get_by_email(db, current_user.email, skip=skip, limit=limit, search=search, status=status)
