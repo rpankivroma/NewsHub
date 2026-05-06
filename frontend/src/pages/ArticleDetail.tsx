@@ -1,36 +1,117 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, User, Clock, ThumbsUp, ThumbsDown, Bookmark, 
-  MessageSquare, AlertCircle, Star 
+  MessageSquare, AlertCircle, Star, Loader2, CheckCircle
 } from 'lucide-react';
-import { Article } from '../types';
+import { Article, User as UserType } from '../types';
 import { newsService } from '../services/newsService';
+import { CommentSection } from '../components/CommentSection';
+import { cn } from '../lib/utils';
 
 interface ArticleDetailProps {
   articleId: number;
   onBack: () => void;
+  user: UserType | null;
+  onLoginClick: () => void;
 }
 
-export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
+export default function ArticleDetail({ articleId, onBack, user, onLoginClick }: ArticleDetailProps) {
   const [article, setArticle] = React.useState<Article | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  
+  // Interaction states
+  const [interactions, setInteractions] = React.useState({
+    liked: false,
+    disliked: false,
+    saved: false
+  });
+  const [isProcessing, setIsProcessing] = React.useState(false);
 
   React.useEffect(() => {
-    const fetchArticle = async () => {
+    const initArticle = async () => {
       setIsLoading(true);
       try {
-        const data = await newsService.getArticle(articleId);
-        setArticle(data);
+        const [articleData, interactionsData] = await Promise.all([
+          newsService.getArticle(articleId),
+          newsService.getInteractions(articleId)
+        ]);
+        setArticle(articleData);
+        setInteractions(interactionsData);
       } catch (err: any) {
         setError(err.message || 'Article not found');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchArticle();
+    initArticle();
   }, [articleId]);
+
+  const handleLike = async () => {
+    if (!user) return onLoginClick();
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      const result = await newsService.likeArticle(articleId);
+      setInteractions(prev => ({
+        ...prev,
+        liked: result.liked,
+        disliked: false // Toggle off dislike if it was on
+      }));
+      if (article) {
+        setArticle({
+          ...article,
+          likes: result.count,
+          // We need current dislike count too, but let's assume we can re-fetch or estimate
+        });
+      }
+      // Re-fetch full article to get accurate counts
+      const updatedArticle = await newsService.getArticle(articleId);
+      setArticle(updatedArticle);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDislike = async () => {
+    if (!user) return onLoginClick();
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const result = await newsService.dislikeArticle(articleId);
+      setInteractions(prev => ({
+        ...prev,
+        disliked: result.disliked,
+        liked: false
+      }));
+      const updatedArticle = await newsService.getArticle(articleId);
+      setArticle(updatedArticle);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return onLoginClick();
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const result = await newsService.saveArticle(articleId);
+      setInteractions(prev => ({ ...prev, saved: result.saved }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -127,39 +208,60 @@ export default function ArticleDetail({ articleId, onBack }: ArticleDetailProps)
 
           <div className="flex items-center justify-between py-6 border-y border-gray-100">
             <div className="flex items-center gap-4">
-              <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all font-bold">
-                <ThumbsUp className="w-5 h-5" /> {article.likes}
+              <button 
+                onClick={handleLike}
+                disabled={isProcessing}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
+                  interactions.liked 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
+                    : "bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                )}
+              >
+                <ThumbsUp className={cn("w-5 h-5", interactions.liked && "fill-white")} /> {article.likes}
               </button>
-              <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gray-50 text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all font-bold">
-                <ThumbsDown className="w-5 h-5" /> {article.dislikes}
+              <button 
+                onClick={handleDislike}
+                disabled={isProcessing}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
+                  interactions.disliked 
+                    ? "bg-red-600 text-white shadow-lg shadow-red-100" 
+                    : "bg-gray-50 text-gray-700 hover:bg-red-50 hover:text-red-600"
+                )}
+              >
+                <ThumbsDown className={cn("w-5 h-5", interactions.disliked && "fill-white")} /> {article.dislikes}
               </button>
             </div>
-            <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-100">
-              <Bookmark className="w-5 h-5" /> Save Story
+            <button 
+              onClick={handleSave}
+              disabled={isProcessing}
+              className={cn(
+                "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
+                interactions.saved 
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" 
+                  : "bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700"
+              )}
+            >
+              {interactions.saved ? (
+                <>
+                  <CheckCircle className="w-5 h-5" /> Saved
+                </>
+              ) : (
+                <>
+                  <Bookmark className="w-5 h-5" /> Save Story
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      <section className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-          <MessageSquare className="w-7 h-7 text-blue-600 shadow-sm" /> Comments
-        </h2>
-
-        <div className="mb-12 p-12 bg-blue-50/30 rounded-[2rem] border border-blue-50 flex flex-col items-center">
-           <AlertCircle className="w-10 h-10 text-blue-400 mb-4" />
-           <p className="text-gray-600 font-medium mb-6">Join the conversation. Please sign in to leave a comment.</p>
-           <button className="px-10 py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-95">
-              Sign In to Comment
-           </button>
-        </div>
-
-        <div className="space-y-8">
-           <div className="flex items-center justify-center py-20 bg-gray-50/50 rounded-[2rem] border-2 border-dashed border-gray-100">
-              <p className="text-gray-400 font-medium italic">No comments posted for this article yet.</p>
-           </div>
-        </div>
-      </section>
+      <CommentSection 
+        articleId={articleId} 
+        currentUser={user} 
+        onLoginClick={onLoginClick} 
+      />
     </motion.div>
   );
 }
