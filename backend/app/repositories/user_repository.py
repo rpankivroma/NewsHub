@@ -4,8 +4,25 @@ from typing import List, Optional
 
 class UserRepository:
     @staticmethod
-    def get_all(db: Session) -> List[models.User]:
-        users = db.query(models.User).order_by(models.User.joined_at.desc()).all()
+    def get_all(db: Session, skip: int = 0, limit: int = 20, search: Optional[str] = None, is_admin: Optional[bool] = None, status: Optional[str] = None) -> List[models.User]:
+        from sqlalchemy import or_
+        query = db.query(models.User)
+        
+        if search:
+            query = query.filter(
+                or_(
+                    models.User.full_name.ilike(f"%{search}%"),
+                    models.User.email.ilike(f"%{search}%")
+                )
+            )
+        
+        if is_admin is not None:
+            query = query.filter(models.User.is_admin == is_admin)
+        
+        if status:
+            query = query.filter(models.User.status == status)
+            
+        users = query.order_by(models.User.joined_at.desc()).offset(skip).limit(limit).all()
         for u in users:
             u.saved_articles_count = 0 # Placeholder for now
         return users
