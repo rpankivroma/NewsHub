@@ -10,27 +10,40 @@ export const adminService = {
     return response.json();
   },
 
-  getArticles: async () => {
+  getArticles: async (skip = 0, limit = 20, search?: string, category_id?: number) => {
     const token = localStorage.getItem('token');
-    const response = await fetch('/api/admin/articles', {
+    let url = `/api/admin/articles?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (category_id) url += `&category_id=${category_id}`;
+
+    const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('Failed to fetch articles');
     return response.json();
   },
 
-  getUsers: async () => {
+  getUsers: async (skip = 0, limit = 20, search?: string, is_admin?: boolean, status?: string) => {
     const token = localStorage.getItem('token');
-    const response = await fetch('/api/admin/users', {
+    let url = `/api/admin/users?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (is_admin !== undefined) url += `&is_admin=${is_admin}`;
+    if (status) url += `&status=${status}`;
+
+    const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('Failed to fetch users');
     return response.json();
   },
 
-  getSubmissions: async () => {
+  getSubmissions: async (skip = 0, limit = 20, search?: string, status?: string) => {
     const token = localStorage.getItem('token');
-    const response = await fetch('/api/admin/submissions', {
+    let url = `/api/admin/submissions?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (status) url += `&status=${status}`;
+
+    const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('Failed to fetch submissions');
