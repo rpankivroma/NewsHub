@@ -5,6 +5,7 @@ import { newsService } from '../services/newsService';
 import ProfileHeader from '../components/Profile/ProfileHeader';
 import ProfileTabs from '../components/Profile/ProfileTabs';
 import AboutTab from '../components/Profile/AboutTab';
+import SavedTab from '../components/Profile/SavedTab';
 import PersonalizedTab from '../components/Profile/PersonalizedTab';
 import SubmissionsTab from '../components/Profile/SubmissionsTab';
 import ForgotPasswordModal from '../components/Profile/ForgotPasswordModal';
@@ -12,9 +13,10 @@ import ForgotPasswordModal from '../components/Profile/ForgotPasswordModal';
 interface ProfileProps {
   user: User | null;
   onUserUpdate: (user: User) => void;
+  onArticleClick: (id: number) => void;
 }
 
-export default function Profile({ user, onUserUpdate }: ProfileProps) {
+export default function Profile({ user, onUserUpdate, onArticleClick }: ProfileProps) {
   const [activeTab, setActiveTab] = useState('about');
   const [isEditing, setIsEditing] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -116,14 +118,9 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           />
         )}
 
-        {activeTab === 'saved' && (
-           <div className="flex flex-col items-center justify-center text-center py-20">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No Saved Articles</h3>
-              <p className="text-gray-400 max-w-xs">Articles you bookmark will appear here.</p>
-           </div>
-        )}
+        {activeTab === 'saved' && <SavedTab onArticleClick={onArticleClick} />}
 
-        {activeTab === 'personalized' && <PersonalizedTab />}
+        {activeTab === 'personalized' && <PersonalizedTab onArticleClick={onArticleClick} />}
         
         {activeTab === 'submissions' && <SubmissionsTab user={user} />}
       </div>
