@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import shutil
 import os
 import uuid
@@ -33,16 +33,31 @@ def get_stats(
     return AdminRepository.get_stats(db, days, top_limit, category_filter)
 
 @router.get("/articles", response_model=List[schemas.Article])
-def get_admin_articles(db: Session = Depends(get_db), _ = Depends(check_admin)):
-    return ArticleRepository.get_all(db, limit=100) # Admin gets more
+def get_admin_articles(
+    skip: int = 0,
+    limit: int = 20,
+    search: Optional[str] = None,
+    category_id: Optional[int] = None,
+    db: Session = Depends(get_db), 
+    _ = Depends(check_admin)
+):
+    return ArticleRepository.get_all(db, skip=skip, limit=limit, search=search, category_id=category_id)
 
 @router.get("/categories", response_model=List[schemas.Category])
 def get_admin_categories(db: Session = Depends(get_db), _ = Depends(check_admin)):
     return CategoryRepository.get_all(db)
 
 @router.get("/users", response_model=List[schemas.User])
-def get_admin_users(db: Session = Depends(get_db), _ = Depends(check_admin)):
-    return UserRepository.get_all(db)
+def get_admin_users(
+    skip: int = 0,
+    limit: int = 20,
+    search: Optional[str] = None,
+    is_admin: Optional[bool] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    _ = Depends(check_admin)
+):
+    return UserRepository.get_all(db, skip=skip, limit=limit, search=search, is_admin=is_admin, status=status)
 
 @router.post("/users/{user_id}/toggle-block")
 def toggle_user_status(user_id: int, db: Session = Depends(get_db), _ = Depends(check_admin)):
@@ -52,8 +67,15 @@ def toggle_user_status(user_id: int, db: Session = Depends(get_db), _ = Depends(
     return {"status": user.status}
 
 @router.get("/submissions")
-def get_admin_submissions(db: Session = Depends(get_db), _ = Depends(check_admin)):
-    return SubmissionRepository.get_all(db)
+def get_admin_submissions(
+    skip: int = 0,
+    limit: int = 20,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    _ = Depends(check_admin)
+):
+    return SubmissionRepository.get_all(db, skip=skip, limit=limit, search=search, status=status)
 
 @router.patch("/submissions/{submission_id}")
 def update_submission(submission_id: int, data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(check_admin)):
