@@ -41,6 +41,7 @@ export interface Article {
   likes: number;
   dislikes: number;
   views?: number;
+  created_at?: string;
 }
 
 export interface Comment {
