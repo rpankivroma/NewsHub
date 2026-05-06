@@ -41,8 +41,11 @@ export const userService = {
     return response.json();
   },
 
-  getPersonalizedFeed: async (): Promise<Article[]> => {
-    const response = await fetch(`${API_URL}/me/personalized`, {
+  getPersonalizedFeed: async (skip = 0, limit = 10, search?: string): Promise<Article[]> => {
+    let url = `${API_URL}/me/personalized?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -51,8 +54,47 @@ export const userService = {
     return response.json();
   },
 
-  getSubmissions: async (): Promise<any[]> => {
-    const response = await fetch(`${API_URL}/me/submissions`, {
+  getSavedArticles: async (skip = 0, limit = 20, search?: string, category_id?: number): Promise<Article[]> => {
+    let url = `${API_URL}/me/saved?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (category_id) url += `&category_id=${category_id}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (!response.ok) throw new Error('Failed to fetch saved articles');
+    return response.json();
+  },
+
+  toggleSaveArticle: async (articleId: number): Promise<{ saved: boolean }> => {
+    const response = await fetch(`/api/articles/${articleId}/save`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (!response.ok) throw new Error('Failed to toggle save article');
+    return response.json();
+  },
+
+  isArticleSaved: async (articleId: number): Promise<{ saved: boolean }> => {
+    const response = await fetch(`/api/articles/${articleId}/is-saved`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (!response.ok) throw new Error('Failed to check if article is saved');
+    return response.json();
+  },
+
+  getSubmissions: async (skip = 0, limit = 20, search?: string, status?: string): Promise<any[]> => {
+    let url = `${API_URL}/me/submissions?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (status) url += `&status=${status}`;
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
