@@ -7,24 +7,23 @@ from typing import Dict, Any, List
 class AdminRepository:
     @staticmethod
     def get_stats(db: Session, days: int = 30, top_limit: int = 5, category_filter: str = "All") -> Dict[str, Any]:
-        # Implementation moved from admin.py
-        total_articles = db.query(models.Article).count()
-        articles = db.query(models.Article).all()
+        start_date = datetime.now() - timedelta(days=days)
+        
+        # Base query for articles honoring category filter and date
+        article_q = db.query(models.Article).filter(models.Article.created_at >= start_date)
+        if category_filter != "All":
+            article_q = article_q.join(models.Category).filter(models.Category.name == category_filter)
+            
+        total_articles = article_q.count()
+        articles = article_q.all()
         total_words = sum(len(a.content.split()) for a in articles) if articles else 0
         avg_reading_time = round((total_words / 200) / (total_articles if total_articles > 0 else 1), 1)
         
-        top_viewed_q = db.query(models.Article).order_by(desc(models.Article.views))
-        least_viewed_q = db.query(models.Article).order_by(models.Article.views)
+        top_viewed_articles = article_q.order_by(desc(models.Article.views)).limit(top_limit).all()
+        least_viewed_articles = article_q.order_by(models.Article.views).limit(top_limit).all()
         
-        start_date = datetime.now() - timedelta(days=days)
-        top_viewed_articles = top_viewed_q.filter(models.Article.created_at >= start_date).limit(top_limit).all()
-        least_viewed_articles = least_viewed_q.filter(models.Article.created_at >= start_date).limit(top_limit).all()
-        
-        avg_views_q = db.query(func.avg(models.Article.views))
-        if category_filter != "All":
-            avg_views_q = avg_views_q.join(models.Category).filter(models.Category.name == category_filter)
-        
-        avg_views = float(avg_views_q.filter(models.Article.created_at >= start_date).scalar() or 0)
+        total_views = float(sum(a.views for a in articles) if articles else 0)
+        avg_views = round(total_views / (total_articles if total_articles > 0 else 1), 1)
         
         total_users = db.query(models.User).count()
         new_users_data = db.query(
@@ -75,17 +74,24 @@ class AdminRepository:
             func.sum(models.Article.views).label("total_views")
         ).join(models.Article).group_by(models.Category.name).order_by(desc("total_views")).limit(5).all()
 
-        distinct_authors = db.query(models.Article.author_id).distinct().count()
-        avg_per_author = round(total_articles / (distinct_authors or 1), 1)
+        author_q = db.query(models.Article.author_id).distinct().filter(models.Article.created_at >= start_date)
+        if category_filter != "All":
+            author_q = author_q.join(models.Category).filter(models.Category.name == category_filter)
+        distinct_authors = author_q.count()
         
-        total_views = float(db.query(func.sum(models.Article.views)).scalar() or 0)
+        avg_per_author = round(total_articles / (distinct_authors or 1), 1)
         avg_views_per_author = round(total_views / (distinct_authors or 1), 1)
         
-        top_authors = db.query(
+        top_authors_q = db.query(
             models.User.full_name,
             func.count(models.Article.id).label("article_count"),
             func.sum(models.Article.views).label("total_views")
-        ).join(models.Article, models.User.id == models.Article.author_id).group_by(models.User.full_name).order_by(desc("total_views")).limit(top_limit).all()
+        ).join(models.Article, models.User.id == models.Article.author_id).filter(models.Article.created_at >= start_date)
+        
+        if category_filter != "All":
+            top_authors_q = top_authors_q.join(models.Category, models.Article.category_id == models.Category.id).filter(models.Category.name == category_filter)
+            
+        top_authors = top_authors_q.group_by(models.User.full_name).order_by(desc("total_views")).limit(top_limit).all()
 
         pending_articles = db.query(models.Submission).filter(models.Submission.status == "pending").count()
         rejected_articles = db.query(models.Submission).filter(
