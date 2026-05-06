@@ -1,7 +1,28 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..db.database import Base
+
+bookmarks = Table(
+    "bookmarks",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("article_id", Integer, ForeignKey("articles.id"), primary_key=True),
+)
+
+article_likes = Table(
+    "article_likes",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("article_id", Integer, ForeignKey("articles.id"), primary_key=True),
+)
+
+article_dislikes = Table(
+    "article_dislikes",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("article_id", Integer, ForeignKey("articles.id"), primary_key=True),
+)
 
 class Article(Base):
     __tablename__ = "articles"
@@ -23,3 +44,6 @@ class Article(Base):
     user_author = relationship("User", back_populates="articles")
     category_rel = relationship("Category", back_populates="articles")
     comments = relationship("Comment", back_populates="article")
+    saved_by = relationship("User", secondary=bookmarks, back_populates="saved_articles")
+    liked_by = relationship("User", secondary=article_likes, back_populates="liked_articles")
+    disliked_by = relationship("User", secondary=article_dislikes, back_populates="disliked_articles")
