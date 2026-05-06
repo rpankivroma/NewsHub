@@ -8,11 +8,16 @@ import sys
 # Add the backend directory to sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.models import Base
-from app.db.database import SQLALCHEMY_DATABASE_URL
-
-# Ensure all models are imported so they are registered on the metadata
-from app import models
+from app.models.user import User
+from app.models.category import Category
+from app.models.article_model import Article, bookmarks
+from app.models.comment import Comment
+from app.models.donation import Donation
+from app.models.donation_settings import DonationSettings
+from app.models.about_page import AboutPage
+from app.models.submission_model import Submission
+from app.models.analytics import AdminLog, Visit
+from app.db.database import Base, SQLALCHEMY_DATABASE_URL
 
 config = context.config
 
