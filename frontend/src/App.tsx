@@ -24,6 +24,16 @@ export default function App() {
     const initApp = async () => {
       const token = authService.getToken();
       
+      // Check for articleId in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const articleIdParam = urlParams.get('articleId');
+      if (articleIdParam) {
+        setSelectedArticleId(parseInt(articleIdParam));
+        setCurrentPage('article');
+        // Clear the query param
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
       try {
         const [categoriesData] = await Promise.all([
           newsService.getCategories(),
@@ -76,11 +86,16 @@ export default function App() {
       <main className="pb-24">
         {currentPage === 'home' && <Home onArticleClick={handleArticleClick} />}
         {currentPage === 'article' && selectedArticleId && (
-          <ArticleDetail articleId={selectedArticleId} onBack={() => setCurrentPage('home')} />
+          <ArticleDetail 
+            articleId={selectedArticleId} 
+            onBack={() => setCurrentPage('home')} 
+            user={user}
+            onLoginClick={() => setIsAuthModalOpen(true)}
+          />
         )}
         {currentPage === 'about' && <About />}
         {currentPage === 'donate' && <Donate />}
-        {currentPage === 'profile' && <Profile user={user} onUserUpdate={setUser} />}
+        {currentPage === 'profile' && <Profile user={user} onUserUpdate={setUser} onArticleClick={handleArticleClick} />}
         {currentPage === 'admin' && <Admin user={user} />}
       </main>
 
