@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .db.database import engine
 from . import models
-from .api import auth, articles, categories, users, admin, about, donations, submissions
+from .api import auth, articles, categories, users, admin, about, donations, submissions, comments
 from sqlalchemy.orm import Session
 from .db.database import SessionLocal
 import datetime
@@ -112,6 +112,7 @@ app.include_router(about.router)
 app.include_router(donations.router)
 app.include_router(admin.router)
 app.include_router(submissions.router)
+app.include_router(comments.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
