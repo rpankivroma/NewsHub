@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
   FileText, TrendingUp, Clock, Eye, Activity, Globe, Monitor, Smartphone,
-  BarChart2, Briefcase, TrendingDown, Heart, MessageSquare, Star, Download, UserCheck
+  BarChart2, Briefcase, TrendingDown, Heart, MessageSquare, Star, Download, UserCheck, Filter, ChevronDown
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Category } from '../../types';
@@ -45,14 +45,38 @@ export const AdminStats: React.FC<AdminStatsProps> = ({
 }) => {
   return (
     <div id="analytics-dashboard" className="space-y-12 animate-in fade-in duration-500 pb-20 bg-gray-50 p-8 rounded-[3rem]">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <h2 className="text-3xl font-bold text-gray-900">Comprehensive Analytics</h2>
-          <button 
-            onClick={downloadPDFReport}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-100 transition-all active:scale-95"
-          >
-            <Download className="w-5 h-5" /> Download Report
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Filter className={cn(
+                "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors",
+                statsFilters.categoryFilter !== 'All' ? "text-blue-600" : "text-gray-400"
+              )} />
+              <select 
+                value={statsFilters.categoryFilter}
+                onChange={(e) => setStatsFilters((prev: any) => ({...prev, categoryFilter: e.target.value}))}
+                className={cn(
+                  "pl-10 pr-10 py-3 bg-white border rounded-2xl text-sm font-bold transition-all outline-none shadow-sm appearance-none cursor-pointer min-w-[160px]",
+                  statsFilters.categoryFilter !== 'All' 
+                    ? "border-blue-600 text-blue-600" 
+                    : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <option value="All">All Topics</option>
+                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+            </div>
+            <button 
+              onClick={downloadPDFReport}
+              className="flex items-center gap-2 px-6 py-3 bg-[#10b981] text-white font-bold rounded-2xl hover:bg-emerald-600 shadow-md shadow-emerald-100 transition-all active:scale-95 whitespace-nowrap"
+            >
+              <Download className="w-5 h-5" /> Download Report
+            </button>
+          </div>
         </div>
 
         {/* 1. Content Performance */}
