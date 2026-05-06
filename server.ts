@@ -48,6 +48,20 @@ async function startServer() {
     }
   }));
 
+  // Proxy FastAPI docs and openapi schema
+  const docsProxy = createProxyMiddleware({
+    target: `http://127.0.0.1:${BACKEND_PORT}`,
+    changeOrigin: true,
+    onError: (err, req, res) => {
+      console.error("Docs Proxy Error:", err);
+      (res as any).status(502).json({ detail: "Backend is not responding" });
+    }
+  });
+
+  app.use("/docs", docsProxy);
+  app.use("/redoc", docsProxy);
+  app.use("/openapi.json", docsProxy);
+
   // Proxy /static requests to FastAPI (for article images)
   app.use("/static", createProxyMiddleware({
     target: `http://127.0.0.1:${BACKEND_PORT}`,
