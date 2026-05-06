@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class CommentBase(BaseModel):
     content: str
@@ -11,6 +12,8 @@ class CommentCreate(CommentBase):
 class Comment(CommentBase):
     id: int
     user_id: int
+    user_full_name: Optional[str] = None
+    user_avatar_url: Optional[str] = None
     created_at: datetime
     
     class Config:
