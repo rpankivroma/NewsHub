@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Newspaper, X, Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
+import { Newspaper, X, Mail, Lock, User as UserIcon, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { authService } from '../services/authService';
+import { newsService } from '../services/newsService';
 import { User } from '../types';
 import VerifyModal from './VerifyModal';
 import ForgotPasswordModal from './ForgotPasswordModal';
@@ -12,7 +13,7 @@ interface AuthModalProps {
   onLoginSuccess: (user: User) => void;
 }
 
-type AuthMode = 'login' | 'register' | 'verify' | 'forgot-password';
+type AuthMode = 'login' | 'register' | 'verify' | 'forgot-password' | 'blocked';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
   const [mode, setMode] = React.useState<AuthMode>('login');
@@ -23,6 +24,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
+  const [newsroomEmail, setNewsroomEmail] = React.useState('newsroom@newshub.com');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +41,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           if (err.message.includes('verified')) {
             setMode('verify');
             setError('Please verify your email.');
+          } else if (err.message.toLowerCase().includes('blocked')) {
+            try {
+              const aboutData = await newsService.getAbout();
+              setNewsroomEmail(aboutData.newsroom_email || 'newsroom@newshub.com');
+            } catch (fetchErr) {
+              console.error('Failed to fetch newsroom email', fetchErr);
+            }
+            setMode('blocked');
           } else {
             throw err;
           }
@@ -100,6 +110,37 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
             setError('Password reset successful! Please sign in.');
           }}
         />
+      );
+    }
+
+    if (mode === 'blocked') {
+      return (
+        <div className="p-10 flex flex-col items-center text-center">
+          <div className="bg-red-100 p-4 rounded-full mb-6">
+            <ShieldAlert className="w-12 h-12 text-red-600" />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Account Blocked</h2>
+          
+          <div className="bg-red-50 p-6 rounded-2xl border border-red-100 mb-8 max-w-sm">
+            <p className="text-gray-700 leading-relaxed text-sm">
+              Your account has been blocked. If you want to know the reason for the blocking or believe that you were blocked by mistake, contact us by email:
+            </p>
+            <a 
+              href={`mailto:${newsroomEmail}`}
+              className="block mt-4 text-base font-bold text-red-600 hover:underline break-all"
+            >
+              {newsroomEmail}
+            </a>
+          </div>
+
+          <button 
+            onClick={() => setMode('login')}
+            className="w-full py-4 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-all shadow-lg"
+          >
+            Back to Sign In
+          </button>
+        </div>
       );
     }
 
