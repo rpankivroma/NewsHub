@@ -1,9 +1,9 @@
 
 export const adminService = {
-  getStats: async (filters: { days?: number; topLimit?: number; categoryFilter?: string } = {}) => {
+  getStats: async (filters: { days?: number; topLimit?: number; categoryFilter?: string; trafficTrendDays?: number } = {}) => {
     const token = localStorage.getItem('token');
-    const { days = 30, topLimit = 5, categoryFilter = 'All' } = filters;
-    const response = await fetch(`/api/admin/stats?days=${days}&top_limit=${topLimit}&category_filter=${categoryFilter}`, {
+    const { days = 30, topLimit = 5, categoryFilter = 'All', trafficTrendDays = 7 } = filters;
+    const response = await fetch(`/api/admin/stats?days=${days}&top_limit=${topLimit}&category_filter=${categoryFilter}&traffic_trend_days=${trafficTrendDays}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('Failed to fetch admin stats');
