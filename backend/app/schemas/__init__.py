@@ -7,6 +7,7 @@ from .token import Token, TokenData
 from .donation_settings import DonationSettings, DonationSettingsCreate
 from .donation import Donation, DonationCreate
 from .about_page import AboutPage, AboutPageCreate
+from .analytics import VisitCreate
 
 # This allows importing all schemas from backend.app.schemas
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "Token", "TokenData",
     "DonationSettings", "DonationSettingsCreate",
     "Donation", "DonationCreate",
-    "AboutPage", "AboutPageCreate"
+    "AboutPage", "AboutPageCreate",
+    "VisitCreate"
 ]
