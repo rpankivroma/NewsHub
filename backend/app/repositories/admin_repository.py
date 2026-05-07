@@ -6,8 +6,9 @@ from typing import Dict, Any, List
 
 class AdminRepository:
     @staticmethod
-    def get_stats(db: Session, days: int = 30, top_limit: int = 5, category_filter: str = "All") -> Dict[str, Any]:
+    def get_stats(db: Session, days: int = 30, top_limit: int = 5, category_filter: str = "All", traffic_trend_days: int = 7) -> Dict[str, Any]:
         start_date = datetime.now() - timedelta(days=days)
+        traffic_trend_start = datetime.now() - timedelta(days=traffic_trend_days)
         
         # Base query for articles honoring category filter and date
         article_q = db.query(models.Article).filter(models.Article.created_at >= start_date)
@@ -59,9 +60,17 @@ class AdminRepository:
             func.count(models.Visit.id).label("total"),
             func.sum(case((models.Visit.is_new_user == True, 1), else_=0)).label("new"),
             func.sum(case((models.Visit.is_new_user == False, 1), else_=0)).label("returning")
-        ).filter(models.Visit.timestamp >= (datetime.now() - timedelta(days=7))).group_by(func.date(models.Visit.timestamp)).all()
+        ).filter(models.Visit.timestamp >= traffic_trend_start).group_by(func.date(models.Visit.timestamp)).all()
         
         traffic_trend = [{"date": str(d.date), "total": int(d.total), "new": int(d.new or 0), "returning": int(d.returning or 0)} for d in traffic_data]
+
+        from sqlalchemy import distinct
+        geo_dist_query = db.query(
+            models.Visit.country,
+            func.count(distinct(models.Visit.ip_address)).label("count")
+        ).filter(models.Visit.timestamp >= start_date).group_by(models.Visit.country).order_by(desc("count")).all()
+        
+        geo_stats = [{"country": d.country or "Unknown", "count": d.count} for d in geo_dist_query]
 
         category_dist_q = db.query(
             models.Category.name,
@@ -132,7 +141,8 @@ class AdminRepository:
                 "returningUsers": sum(x.count for x in new_vs_returning if not x.is_new_user),
                 "trafficTrend": traffic_trend,
                 "deviceDist": [{"name": d.device_type, "value": d.count} for d in device_dist],
-                "returningDist": [{"name": "New", "value": sum(x.count for x in new_vs_returning if x.is_new_user)}, {"name": "Returning", "value": sum(x.count for x in new_vs_returning if not x.is_new_user)}]
+                "returningDist": [{"name": "New", "value": sum(x.count for x in new_vs_returning if x.is_new_user)}, {"name": "Returning", "value": sum(x.count for x in new_vs_returning if not x.is_new_user)}],
+                "geoDist": geo_stats
             },
             "categories": {
                 "distribution": [{"name": c.name, "value": c.value} for c in category_dist_q],
