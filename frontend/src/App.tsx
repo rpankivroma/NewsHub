@@ -11,6 +11,7 @@ import Admin from './pages/Admin';
 import { Article, User } from './types';
 import { authService } from './services/authService';
 import { newsService } from './services/newsService';
+import { analyticsService } from './services/analyticsService';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -19,6 +20,13 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const path = currentPage === 'article' && selectedArticleId 
+      ? `/article/${selectedArticleId}` 
+      : `/${currentPage}`;
+    analyticsService.trackVisit(path);
+  }, [currentPage, selectedArticleId]);
 
   useEffect(() => {
     const initApp = async () => {
