@@ -28,9 +28,10 @@ def get_stats(
     _ = Depends(check_admin),
     days: int = 30,
     top_limit: int = 5,
-    category_filter: str = "All"
+    category_filter: str = "All",
+    traffic_trend_days: int = 7
 ):
-    return AdminRepository.get_stats(db, days, top_limit, category_filter)
+    return AdminRepository.get_stats(db, days, top_limit, category_filter, traffic_trend_days)
 
 @router.get("/articles", response_model=List[schemas.Article])
 def get_admin_articles(
