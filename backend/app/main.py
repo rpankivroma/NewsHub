@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .db.database import engine
 from . import models
-from .api import auth, articles, categories, users, admin, about, donations, submissions, comments
+from .api import auth, articles, categories, users, admin, about, donations, submissions, comments, analytics
 from sqlalchemy.orm import Session
 from .db.database import SessionLocal
 import datetime
@@ -16,6 +16,20 @@ os.makedirs(os.path.join(static_dir, "profile"), exist_ok=True)
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
+
+# Auto-migration for new columns
+def run_migrations():
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE visits ADD COLUMN country VARCHAR(100) NULL"))
+            conn.commit()
+            print("🚀 Database migrated: Added 'country' to 'visits'.")
+    except Exception:
+        # Likely already exists
+        pass
+
+run_migrations()
 
 # Seeding Logic - Minimal for testing
 def seed_data():
@@ -89,6 +103,28 @@ def seed_data():
             db.add(donations)
             db.commit()
             print("✅ Seeded donation settings.")
+
+        # Seed Visits if empty
+        if db.query(models.Visit).count() == 0:
+            print("🌱 Seeding visits data...")
+            for i in range(30): # Last 30 days
+                date = datetime.datetime.now() - datetime.timedelta(days=i)
+                # Random visits per day
+                num_visits = random.randint(10, 50)
+                for _ in range(num_visits):
+                    is_new = random.random() > 0.4
+                    device = "desktop" if random.random() > 0.3 else "mobile"
+                    countries = ["United States", "Canada", "United Kingdom", "Germany", "India", "France", "Brazil", "Spain", "Japan", "Ukraine"]
+                    v = models.Visit(
+                        timestamp=date - datetime.timedelta(hours=random.randint(0, 23)),
+                        device_type=device,
+                        is_new_user=is_new,
+                        path=random.choice(["/", "/about", "/donate", "/article/1"]),
+                        country=random.choice(countries) if random.random() > 0.05 else None
+                    )
+                    db.add(v)
+            db.commit()
+            print("✅ Seeded visits.")
             
         print("✨ Seeding complete.")
 
@@ -113,6 +149,7 @@ app.include_router(donations.router)
 app.include_router(admin.router)
 app.include_router(submissions.router)
 app.include_router(comments.router)
+app.include_router(analytics.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
