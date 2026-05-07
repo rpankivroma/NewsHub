@@ -20,3 +20,4 @@ class Visit(Base):
     is_new_user = Column(Boolean, default=False)
     path = Column(String(255))
     ip_address = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
