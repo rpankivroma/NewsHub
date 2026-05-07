@@ -17,7 +17,7 @@ import { cn } from '../lib/utils';
 import { adminService } from '../services/adminService';
 import { User, Article, Category } from '../types';
 
-import { AdminStats } from '../components/Admin/AdminStats';
+import { AdminStats } from '../components/Admin/AdminStats/index';
 import { ArticleManager } from '../components/Admin/ArticleManager';
 import { SubmissionManager } from '../components/Admin/SubmissionManager';
 import { UserManager } from '../components/Admin/UserManager';
@@ -53,6 +53,7 @@ interface Stats {
     trafficTrend: any[];
     deviceDist: any[];
     returningDist: any[];
+    geoDist?: any[];
   };
   categories: {
     distribution: any[];
@@ -91,7 +92,7 @@ export default function Admin({ user }: AdminProps) {
   const [statsFilters, setStatsFilters] = React.useState({
     days: 30,
     topLimit: 5,
-    categoryFilter: 'All'
+    sectionFilter: 'All'
   });
   const [engagementTrendPeriod, setEngagementTrendPeriod] = React.useState('Daily');
   const [trafficTrendDays, setTrafficTrendDays] = React.useState(7);
@@ -158,12 +159,16 @@ export default function Admin({ user }: AdminProps) {
     setError(null);
     try {
       if (activeTab === 'dashboard') {
-        const data = await adminService.getStats({
-          days: statsFilters.days,
-          topLimit: statsFilters.topLimit,
-          categoryFilter: statsFilters.categoryFilter
-        });
-        setStats(data);
+        const [statsData, categoriesData] = await Promise.all([
+          adminService.getStats({
+            days: statsFilters.days,
+            topLimit: statsFilters.topLimit,
+            trafficTrendDays: trafficTrendDays
+          }),
+          adminService.getCategories()
+        ]);
+        setStats(statsData);
+        setCategories(categoriesData);
       } else if (activeTab === 'articles') {
         const data = await adminService.getCategories();
         setCategories(data);
@@ -190,11 +195,11 @@ export default function Admin({ user }: AdminProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, statsFilters.days, statsFilters.topLimit, statsFilters.categoryFilter]);
+  }, [activeTab, statsFilters.days, statsFilters.topLimit, trafficTrendDays]);
 
   React.useEffect(() => {
     fetchData();
-  }, [fetchData, statsFilters.days, statsFilters.topLimit, statsFilters.categoryFilter]);
+  }, [fetchData, statsFilters.days, statsFilters.topLimit, trafficTrendDays]);
 
   const exportPDF = async () => {
     const element = document.getElementById('analytics-dashboard');
@@ -313,70 +318,115 @@ export default function Admin({ user }: AdminProps) {
     { id: 'about', label: 'About', icon: Pencil },
   ];
 
-  const downloadPDFReport = () => {
+  const downloadPDFReport = async () => {
     if (!stats) return;
     
-    const doc = new jsPDF();
-    const now = new Date().toLocaleString();
-    
-    doc.setFontSize(20);
-    doc.text('NewsHub Comprehensive Analytics Report', 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${now}`, 14, 30);
-    doc.text(`Time Range: Last ${statsFilters.days} days`, 14, 35);
+    try {
+      setIsLoading(true);
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const now = new Date().toLocaleString();
+      const pageWidth = doc.internal.pageSize.getWidth();
 
-    // 1. Content Performance
-    doc.setFontSize(14);
-    doc.text('1. Content Performance', 14, 45);
-    autoTable(doc, {
-      startY: 50,
-      head: [['Metric', 'Value']],
-      body: [
-        ['Total Articles', stats.content.totalArticles],
-        ['Avg Reading Time', `${stats.content.avgReadingTime} min`],
-        ['Avg Views per Article', stats.content.avgViews],
-        ['Total Views', stats.content.totalViews],
-      ],
-    });
+      // Title Page
+      doc.setFontSize(24);
+      doc.setTextColor(15, 23, 42); // #0f172a
+      doc.text('NewsHub Analytics', 14, 30);
+      doc.setFontSize(14);
+      doc.setTextColor(100);
+      doc.text('Comprehensive Performance Report', 14, 40);
+      
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${now}`, 14, 55);
+      doc.text(`Time Range: Last ${statsFilters.days} days`, 14, 60);
 
-    // 2. User Engagement
-    doc.setFontSize(14);
-    doc.text('2. User Engagement', 14, (doc as any).lastAutoTable.finalY + 15);
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 20,
-      head: [['Metric', 'Value']],
-      body: [
-        ['Total Users', stats.engagement.totalUsers],
-        ['Active Users (30d)', stats.engagement.activeUsers],
-        ['Avg Likes per Article', stats.engagement.avgLikes],
-        ['Avg Comments per Article', stats.engagement.avgComments],
-      ],
-    });
+      // Section 1: Content Performance
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('1. Content Performance', 14, 75);
+      autoTable(doc, {
+        startY: 80,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Articles', stats.content.totalArticles],
+          ['Avg Reading Time', `${stats.content.avgReadingTime} min`],
+          ['Avg Views per Article', stats.content.avgViews],
+          ['Total Page Views', stats.content.totalViews],
+        ],
+        headStyles: { fillColor: [37, 99, 235] }
+      });
 
-    // 3. Traffic Analytics
-    doc.setFontSize(14);
-    doc.text('3. Traffic Analytics', 14, (doc as any).lastAutoTable.finalY + 15);
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 20,
-      head: [['Category', 'Value']],
-      body: [
-        ['Total Visits', stats.traffic.totalVisits],
-        ['Today\'s Visits', stats.traffic.todayVisits],
-        ['New Users', stats.traffic.newUsers],
-        ['Returning Users', stats.traffic.returningUsers],
-      ],
-    });
+      // Section 2: User Engagement
+      doc.setFontSize(16);
+      doc.text('2. User Engagement', 14, (doc as any).lastAutoTable.finalY + 15);
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Registered Users', stats.engagement.totalUsers],
+          ['Active Users (30d)', stats.engagement.activeUsers],
+          ['Avg Likes per Article', stats.engagement.avgLikes],
+          ['Avg Comments per Article', stats.engagement.avgComments],
+        ],
+        headStyles: { fillColor: [37, 99, 235] }
+      });
 
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.text('4. Top Performing Articles', 14, 20);
-    autoTable(doc, {
-      startY: 25,
-      head: [['Title', 'Category', 'Views']],
-      body: stats.content.topViewed.map(a => [a.title, a.category, a.views]),
-    });
+      doc.addPage();
+      doc.setFontSize(16);
+      doc.text('3. Traffic Analytics', 14, 20);
+      autoTable(doc, {
+        startY: 25,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Total Overall Views', stats.traffic.totalVisits],
+          ['New Registered Users (Period)', stats.traffic.newUsers],
+          ['Returning Visitors', stats.traffic.returningUsers],
+        ],
+        headStyles: { fillColor: [37, 99, 235] }
+      });
 
-    doc.save(`newshub-analytics-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      // Section 4: Geographic Hubs
+      doc.setFontSize(16);
+      doc.text('4. Geographic Distribution (Unique Visitors)', 14, (doc as any).lastAutoTable.finalY + 15);
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Country', 'Unique Visitors', 'Market Share']],
+        body: (stats.traffic.geoDist || [])
+          .filter((d: any) => d.country !== 'Unknown')
+          .slice(0, 15)
+          .map(d => [
+            d.country, 
+            d.count, 
+            `${((d.count / (stats.traffic.totalVisits || 1)) * 100).toFixed(1)}%`
+          ]),
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      doc.addPage();
+      doc.setFontSize(16);
+      doc.text('5. Category Performance', 14, 20);
+      autoTable(doc, {
+        startY: 25,
+        head: [['Category', 'Articles Published', 'Cumulative Views']],
+        body: stats.categories.popular.map(c => [c.name, c.articles, c.views]),
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      doc.setFontSize(16);
+      doc.text('6. Author Performance', 14, (doc as any).lastAutoTable.finalY + 15);
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Author', 'Total Articles', 'Total Views']],
+        body: stats.authors.top.map(a => [a.name, a.articles, a.views]),
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      doc.save(`newshub-analytics-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err: any) {
+      console.error('PDF Generation Error:', err);
+      alert('Failed to generate PDF report: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderEmptyState = (message: string) => (
@@ -421,7 +471,6 @@ export default function Admin({ user }: AdminProps) {
       {activeTab === 'dashboard' && stats && (
         <AdminStats 
           stats={stats}
-          categories={categories}
           statsFilters={statsFilters}
           setStatsFilters={setStatsFilters}
           engagementTrendPeriod={engagementTrendPeriod}
