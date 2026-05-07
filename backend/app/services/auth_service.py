@@ -125,6 +125,12 @@ class AuthService:
                 detail="Email not verified. Please verify your email first."
             )
         
+        if user.status == "blocked":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account has been blocked. Please contact the newsroom for more information."
+            )
+        
         # Update last login
         from sqlalchemy.sql import func
         user.last_login_at = func.now()
