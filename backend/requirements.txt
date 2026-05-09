@@ -8,3 +8,5 @@ passlib[bcrypt]
 python-jose[cryptography]
 alembic
 python-multipart
+pandas
+openpyxl
