@@ -13,6 +13,7 @@ class User(Base):
     bio = Column(Text)
     avatar_url = Column(String(512))
     is_admin = Column(Boolean, default=False)
+    is_super_admin = Column(Boolean, default=False)
     status = Column(String(50), default="active") # active, blocked, pending
     interests = Column(Text) # JSON string of interests
     tags = Column(Text) # Comma separated category names or JSON
