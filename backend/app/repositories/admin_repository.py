@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, case, desc
 from datetime import datetime, timedelta
 from .. import models
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 class AdminRepository:
     @staticmethod
@@ -108,7 +108,7 @@ class AdminRepository:
             models.Submission.submitted_at >= start_date
         ).count()
         
-        admin_logs = db.query(models.AdminLog).order_by(desc(models.AdminLog.timestamp)).limit(10).all()
+        admin_logs = db.query(models.AdminLog).order_by(desc(models.AdminLog.timestamp)).limit(5).all()
         
         last_published = db.query(models.Article).order_by(desc(models.Article.created_at)).first()
         last_published_time = last_published.created_at if last_published else None
@@ -180,3 +180,97 @@ class AdminRepository:
         )
         db.add(log)
         db.commit()
+
+    @staticmethod
+    def get_logs(
+        db: Session, 
+        skip: int = 0, 
+        limit: int = 10, 
+        search: Optional[str] = None, 
+        action_filter: Optional[str] = None, 
+        admin_id_filter: Optional[int] = None
+    ) -> Dict[str, Any]:
+        query = db.query(models.AdminLog, models.User.full_name).join(models.User, models.User.id == models.AdminLog.admin_id)
+        
+        if search:
+            query = query.filter(models.AdminLog.details.ilike(f"%{search}%"))
+        
+        if action_filter:
+            query = query.filter(models.AdminLog.action == action_filter)
+            
+        if admin_id_filter:
+            query = query.filter(models.AdminLog.admin_id == admin_id_filter)
+            
+        total = query.count()
+        logs_data = query.order_by(desc(models.AdminLog.timestamp)).offset(skip).limit(limit).all()
+        
+        formatted_logs = []
+        for log, full_name in logs_data:
+            formatted_logs.append({
+                "id": log.id,
+                "admin_id": log.admin_id,
+                "admin_name": full_name,
+                "action": log.action,
+                "details": log.details,
+                "timestamp": log.timestamp
+            })
+            
+        return {"logs": formatted_logs, "total": total}
+
+    @staticmethod
+    def get_admins_with_stats(db: Session) -> Dict[str, Any]:
+        admins = db.query(models.User).filter(models.User.is_admin == True).all()
+        
+        results = []
+        now = datetime.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=now.weekday())
+        month_start = today_start.replace(day=1)
+
+        for admin in admins:
+            # Fetch all login/logout logs for this admin
+            logs = db.query(models.AdminLog).filter(
+                models.AdminLog.admin_id == admin.id,
+                models.AdminLog.action.in_(["Admin Login", "Admin Logout"])
+            ).order_by(models.AdminLog.timestamp).all()
+
+            h_today = 0.0
+            h_week = 0.0
+            h_month = 0.0
+
+            login_time = None
+            for log in logs:
+                if log.action == "Admin Login":
+                    login_time = log.timestamp
+                elif log.action == "Admin Logout" and login_time:
+                    # Simplified duration allocation: we count the session in the period it ended
+                    duration = (log.timestamp - login_time).total_seconds() / 3600.0
+                    
+                    if log.timestamp >= today_start:
+                        h_today += duration
+                    if log.timestamp >= week_start:
+                        h_week += duration
+                    if log.timestamp >= month_start:
+                        h_month += duration
+                        
+                    login_time = None
+            
+            # Handle case where admin is still logged in
+            if login_time:
+                duration = (now - login_time).total_seconds() / 3600.0
+                h_today += duration
+                h_week += duration
+                h_month += duration
+
+            results.append({
+                "id": admin.id,
+                "full_name": admin.full_name,
+                "email": admin.email,
+                "joined_at": admin.joined_at,
+                "last_login_at": admin.last_login_at,
+                "hours_today": round(h_today, 2),
+                "hours_week": round(h_week, 2),
+                "hours_month": round(h_month, 2)
+            })
+
+        return {"admins": results, "total": len(results)}
