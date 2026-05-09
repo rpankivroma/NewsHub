@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import shutil
 import os
 import uuid
+import pandas as pd
+import io
+from datetime import datetime
 from .deps import get_current_user
 from .. import models, schemas
 from ..db.database import get_db
@@ -18,8 +22,13 @@ from ..repositories.admin_repository import AdminRepository
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 def check_admin(current_user: models.User = Depends(get_current_user)):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Permission denied. Admin only.")
+    return current_user
+
+def check_super_admin(current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Permission denied. Super Admin only.")
     return current_user
 
 @router.get("/stats")
@@ -61,11 +70,104 @@ def get_admin_users(
     return UserRepository.get_all(db, skip=skip, limit=limit, search=search, is_admin=is_admin, status=status)
 
 @router.post("/users/{user_id}/toggle-block")
-def toggle_user_status(user_id: int, db: Session = Depends(get_db), _ = Depends(check_admin)):
+def toggle_user_status(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(check_admin)):
+    target_user = UserRepository.get_by_id(db, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Only super admin can block/unblock other admins
+    if (target_user.is_admin or target_user.is_super_admin) and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Only Super Admin can modify other admins.")
+
     user = UserRepository.toggle_block(db, user_id)
+    
+    action = "Blocked User" if user.status == "blocked" else "Unblocked User"
+    AdminRepository.create_log(db, current_user.id, action, f"{action}: {user.full_name} ({user.email})")
+    
+    return {"status": user.status}
+
+@router.get("/manage/admins", response_model=schemas.AdminWithStatsList)
+def get_manage_admins(db: Session = Depends(get_db), _ = Depends(check_super_admin)):
+    return AdminRepository.get_admins_with_stats(db)
+
+@router.post("/manage/admins/report")
+def download_admins_report(
+    data: schemas.AdminReportRequest, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(check_super_admin)
+):
+    selected_columns = data.selected_columns
+    if not selected_columns:
+        raise HTTPException(status_code=400, detail="No columns selected")
+
+    admins_data = AdminRepository.get_admins_with_stats(db)["admins"]
+    
+    report_data = []
+    now = datetime.now()
+    for admin in admins_data:
+        row = {}
+        if "full_name" in selected_columns: row["Full name"] = admin["full_name"]
+        if "email" in selected_columns: row["Email"] = admin["email"]
+        if "joined_at" in selected_columns: row["Joined at"] = admin["joined_at"].strftime("%Y-%m-%d")
+        if "time_in_company" in selected_columns:
+            joined = admin["joined_at"]
+            diff_days = (now - joined).days
+            if diff_days < 30: val = f"{max(0, diff_days)} days"
+            else:
+                months = diff_days // 30
+                if months < 12: val = f"{months} months"
+                else:
+                    years = months // 12
+                    rem_months = months % 12
+                    val = f"{years}y {rem_months}m" if rem_months > 0 else f"{years} years"
+            row["Time in Company"] = val
+        if "last_login_at" in selected_columns: 
+            row["Last Login"] = admin["last_login_at"].strftime("%Y-%m-%d %H:%M") if admin["last_login_at"] else "Never"
+        if "hours_today" in selected_columns: row["Hours/Day"] = f"{admin['hours_today']}h"
+        if "hours_week" in selected_columns: row["Hours/Week"] = f"{admin['hours_week']}h"
+        if "hours_month" in selected_columns: row["Hours/Month"] = f"{admin['hours_month']}h"
+        report_data.append(row)
+
+    df = pd.DataFrame(report_data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Admins Report')
+    
+    output.seek(0)
+    
+    filename = f"admins_report_{now.strftime('%Y%m%d_%H%M%S')}.xlsx"
+    headers = {
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+    return StreamingResponse(
+        output, 
+        headers=headers, 
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+@router.post("/manage/admins/{user_id}")
+def promote_to_admin(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(check_super_admin)):
+    user = UserRepository.set_admin_status(db, user_id, True)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"status": user.status}
+    
+    AdminRepository.create_log(db, current_user.id, "Promoted User", f"Promoted {user.full_name} ({user.email}) to Admin")
+    return {"message": f"User {user.full_name} successfully promoted to Admin"}
+
+@router.delete("/manage/admins/{user_id}")
+def delete_admin_profile(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(check_super_admin)):
+    user = UserRepository.get_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    name = user.full_name
+    email = user.email
+    
+    if UserRepository.delete_user(db, user_id):
+        AdminRepository.create_log(db, current_user.id, "Deleted Admin", f"Deleted admin profile: {name} ({email})")
+        return {"message": "Admin profile deleted successfully"}
+    
+    raise HTTPException(status_code=404, detail="User not found")
 
 @router.get("/submissions")
 def get_admin_submissions(
@@ -114,12 +216,36 @@ def update_submission(submission_id: int, data: dict, db: Session = Depends(get_
             # Create the article with the submitter as author
             ArticleRepository.create(db, article_data, author_id, author_name)
             AdminRepository.create_log(db, current_user.id, "Approved Submission", f"Approved and published submission from {author_name}: {updated_submission.title}")
+        elif data["status"] == "rejected" and updated_submission:
+            AdminRepository.create_log(db, current_user.id, "Rejected Submission", f"Rejected submission from {updated_submission.full_name or 'Unknown'}: {updated_submission.title}")
     
     return {"message": "Submission updated"}
 
 @router.get("/donations")
 def get_admin_donations(db: Session = Depends(get_db), _ = Depends(check_admin)):
     return DonationRepository.get_all(db)
+
+@router.get("/logs", response_model=schemas.AdminLogList)
+def get_admin_logs(
+    skip: int = 0,
+    limit: int = 10,
+    search: Optional[str] = None,
+    action: Optional[str] = None,
+    admin_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    _ = Depends(check_admin)
+):
+    return AdminRepository.get_logs(db, skip=skip, limit=limit, search=search, action_filter=action, admin_id_filter=admin_id)
+
+@router.post("/logs/track-pdf")
+def track_pdf_download(db: Session = Depends(get_db), current_user: models.User = Depends(check_admin)):
+    AdminRepository.create_log(db, current_user.id, "Downloaded PDF Report", f"Admin {current_user.full_name} downloaded the comprehensive analytics report.")
+    return {"status": "success"}
+
+@router.post("/logout")
+def admin_logout(db: Session = Depends(get_db), current_user: models.User = Depends(check_admin)):
+    AdminRepository.create_log(db, current_user.id, "Admin Logout", f"Admin {current_user.full_name} logged out.")
+    return {"status": "success"}
 
 @router.post("/upload-image")
 async def upload_article_image(file: UploadFile = File(...), _ = Depends(check_admin)):
@@ -207,15 +333,23 @@ def delete_admin_article(article_id: int, db: Session = Depends(get_db), current
     raise HTTPException(status_code=404, detail="Article not found")
 
 @router.post("/categories", response_model=schemas.Category)
-def create_admin_category(category: schemas.CategoryCreate, db: Session = Depends(get_db), _ = Depends(check_admin)):
-    return CategoryRepository.create(db, category)
+def create_admin_category(category: schemas.CategoryCreate, db: Session = Depends(get_db), current_user: models.User = Depends(check_admin)):
+    db_category = CategoryRepository.create(db, category)
+    AdminRepository.create_log(db, current_user.id, "Created Category", f"Created category: {db_category.name}")
+    return db_category
 
 @router.delete("/categories/{category_id}")
-def delete_admin_category(category_id: int, db: Session = Depends(get_db), _ = Depends(check_admin)):
+def delete_admin_category(category_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(check_admin)):
     if CategoryRepository.has_articles(db, category_id):
         raise HTTPException(status_code=400, detail="Cannot delete category with associated articles")
 
+    category = CategoryRepository.get_by_id(db, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    cat_name = category.name
     if not CategoryRepository.delete(db, category_id):
         raise HTTPException(status_code=404, detail="Category not found")
     
+    AdminRepository.create_log(db, current_user.id, "Deleted Category", f"Deleted category: {cat_name}")
     return {"message": "Category deleted"}
