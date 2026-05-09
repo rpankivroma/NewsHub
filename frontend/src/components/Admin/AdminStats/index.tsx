@@ -10,6 +10,7 @@ import { AuthorPerformance } from './AuthorPerformance';
 import { UsersByCountry } from './UsersByCountry';
 import { SystemStats } from './SystemStats';
 import { BusinessMetrics } from './BusinessMetrics';
+import { CustomSelect } from '../../CustomSelect';
 
 interface AdminStatsProps {
   stats: any;
@@ -59,30 +60,18 @@ export const AdminStats: React.FC<AdminStatsProps> = ({
           <h2 className="text-3xl font-bold text-gray-900">Comprehensive Analytics</h2>
           <div className="flex flex-wrap items-center gap-4">
             {/* Section Filter */}
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                <Filter className={cn(
-                  "w-4 h-4 transition-colors",
-                  statsFilters.sectionFilter !== 'All' ? "text-blue-600" : "text-gray-400"
-                )} />
-              </div>
-              <select 
-                value={statsFilters.sectionFilter}
-                onChange={(e) => setStatsFilters((prev: any) => ({...prev, sectionFilter: e.target.value}))}
-                className={cn(
-                  "pl-10 pr-10 py-3 bg-white border rounded-2xl text-sm font-bold transition-all outline-none shadow-sm appearance-none cursor-pointer min-w-[220px]",
-                  statsFilters.sectionFilter !== 'All' 
-                    ? "border-blue-600 text-blue-600" 
-                    : "border-gray-200 text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <option value="All">All Stats (Full Report)</option>
-                {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
+            <CustomSelect
+              icon={Filter}
+              value={statsFilters.sectionFilter}
+              onChange={(e) => setStatsFilters((prev: any) => ({...prev, sectionFilter: e.target.value}))}
+              className={cn(
+                statsFilters.sectionFilter !== 'All' && "border-blue-600 text-blue-600 font-bold"
+              )}
+              containerClassName="min-w-[220px]"
+            >
+              <option value="All">All Stats (Full Report)</option>
+              {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </CustomSelect>
 
             <button 
               onClick={downloadPDFReport}
