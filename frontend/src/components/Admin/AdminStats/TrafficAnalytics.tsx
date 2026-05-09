@@ -1,10 +1,11 @@
 import React from 'react';
-import { Globe, TrendingUp, Monitor, Activity } from 'lucide-react';
+import { Globe, TrendingUp, Monitor, Activity, Calendar } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell 
 } from 'recharts';
 import { cn } from '../../../lib/utils';
+import { CustomSelect } from '../../CustomSelect';
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f43f5e'];
 
@@ -49,14 +50,16 @@ export const TrafficAnalytics: React.FC<TrafficAnalyticsProps> = ({
             <TrendingUp className="w-5 h-5 text-purple-500" />
             <h4>Traffic Trends</h4>
           </div>
-          <select 
+          <CustomSelect
+            icon={Calendar}
             value={trafficTrendDays}
             onChange={(e) => setTrafficTrendDays(parseInt(e.target.value))}
-            className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-600 outline-none"
+            containerClassName="w-48"
+            className="py-2"
           >
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
-          </select>
+          </CustomSelect>
         </div>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
