@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class UserBase(BaseModel):
@@ -16,7 +16,8 @@ class UserLogin(BaseModel):
 
 class User(UserBase):
     id: int
-    is_admin: bool
+    is_admin: bool = False
+    is_super_admin: bool = False
     status: str
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -52,3 +53,23 @@ class UserUpdate(BaseModel):
     tags: Optional[str] = None # JSON string
     newsletter_subscribed: Optional[bool] = None
     avatar_url: Optional[str] = None
+
+class AdminWithStats(BaseModel):
+    id: int
+    full_name: str
+    email: EmailStr
+    joined_at: datetime
+    last_login_at: Optional[datetime]
+    hours_today: float
+    hours_week: float
+    hours_month: float
+
+    class Config:
+        from_attributes = True
+
+class AdminWithStatsList(BaseModel):
+    admins: List[AdminWithStats]
+    total: int
+
+class AdminReportRequest(BaseModel):
+    selected_columns: List[str]
