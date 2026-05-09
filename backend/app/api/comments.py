@@ -5,6 +5,7 @@ from .deps import get_current_user
 from .. import models, schemas
 from ..db.database import get_db
 from ..repositories.comment_repository import CommentRepository
+from ..repositories.admin_repository import AdminRepository
 
 router = APIRouter(prefix="/comments", tags=["comments"])
 
@@ -37,5 +38,8 @@ def delete_comment(
             detail="Not enough permissions"
         )
     
+    if comment.user_id != current_user.id and current_user.is_admin:
+        AdminRepository.create_log(db, current_user.id, "Deleted Comment", f"Admin deleted comment by user ID {comment.user_id}: {comment.content[:50]}...")
+
     success = CommentRepository.delete(db, comment_id)
     return {"success": success}
