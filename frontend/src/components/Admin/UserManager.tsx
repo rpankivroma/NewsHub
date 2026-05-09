@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Mail, Shield, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Filter, Mail, Shield, Trash2, AlertCircle, Loader2, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { User } from '../../types';
 import SearchInput from '../SearchInput';
 import Pagination from '../Pagination';
 import { adminService } from '../../services/adminService';
+import { CustomSelect } from '../CustomSelect';
 
 interface UserManagerProps {
+  user: User;
   handleToggleUserBlock: (userId: number) => void;
   totalUsersCount?: number;
 }
@@ -14,6 +16,7 @@ interface UserManagerProps {
 const PAGE_SIZE = 10;
 
 export const UserManager: React.FC<UserManagerProps> = ({
+  user: currentUser,
   handleToggleUserBlock: propHandleToggleUserBlock,
   totalUsersCount = 0
 }) => {
@@ -84,47 +87,33 @@ export const UserManager: React.FC<UserManagerProps> = ({
           </div>
           
           <div className="flex items-center gap-4 w-full lg:w-auto">
-            <div className="relative group">
-              <Filter className={cn(
-                "absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none transition-colors",
-                role !== 'all' ? "text-blue-600" : "text-gray-400"
-              )} />
-              <select
-                value={role}
-                onChange={(e) => { setRole(e.target.value as any); setPage(0); }}
-                className={cn(
-                  "pl-12 pr-10 py-4 bg-white border rounded-2xl font-medium appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-blue-100 outline-none shadow-sm min-w-[160px]",
-                  role !== 'all' 
-                    ? "border-blue-600 text-blue-600 font-bold" 
-                    : "border-gray-200 text-gray-700"
-                )}
-              >
-                <option value="all">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="user">User</option>
-              </select>
-            </div>
+            <CustomSelect
+              icon={Users}
+              value={role}
+              onChange={(e) => { setRole(e.target.value as any); setPage(0); }}
+              className={cn(
+                role !== 'all' && "border-blue-600 text-blue-600 focus:ring-blue-100"
+              )}
+              containerClassName="min-w-[180px]"
+            >
+              <option value="all">All Roles</option>
+              <option value="admin">Admin</option>
+              <option value="user">User</option>
+            </CustomSelect>
 
-            <div className="relative group">
-              <Filter className={cn(
-                "absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none transition-colors",
-                status !== 'all' ? "text-blue-600" : "text-gray-400"
-              )} />
-              <select
-                value={status}
-                onChange={(e) => { setStatus(e.target.value as any); setPage(0); }}
-                className={cn(
-                  "pl-12 pr-10 py-4 bg-white border rounded-2xl font-medium appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-blue-100 outline-none shadow-sm min-w-[160px]",
-                  status !== 'all' 
-                    ? "border-blue-600 text-blue-600 font-bold" 
-                    : "border-gray-200 text-gray-700"
-                )}
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="blocked">Blocked</option>
-              </select>
-            </div>
+            <CustomSelect
+              icon={Filter}
+              value={status}
+              onChange={(e) => { setStatus(e.target.value as any); setPage(0); }}
+              className={cn(
+                status !== 'all' && "border-blue-600 text-blue-600 focus:ring-blue-100"
+              )}
+              containerClassName="min-w-[180px]"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="blocked">Blocked</option>
+            </CustomSelect>
           </div>
         </div>
 
@@ -172,14 +161,17 @@ export const UserManager: React.FC<UserManagerProps> = ({
                           </span>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => onToggle(u.id)}
+                        disabled={Boolean((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin)}
                         className={cn(
                           "px-8 py-3 rounded-2xl font-extrabold text-sm transition-all active:scale-95",
-                          u.status === 'blocked' 
-                            ? "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-100" 
-                            : "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-100"
+                          u.status === 'blocked'
+                            ? "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-100"
+                            : "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-100",
+                          ((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin) && "opacity-50 cursor-not-allowed grayscale"
                         )}
+                        title={((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin) ? "Only Super Admin can block other admins" : ""}
                       >
                         {u.status === 'blocked' ? 'Unblock' : 'Block'}
                       </button>
