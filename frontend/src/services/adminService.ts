@@ -221,5 +221,80 @@ export const adminService = {
       throw new Error(error.detail || 'Failed to delete category');
     }
     return response.json();
+  },
+
+  getLogs: async (skip = 0, limit = 10, search?: string, action?: string, admin_id?: number) => {
+    const token = localStorage.getItem('token');
+    let url = `/api/admin/logs?skip=${skip}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (action) url += `&action=${encodeURIComponent(action)}`;
+    if (admin_id) url += `&admin_id=${admin_id}`;
+
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch logs');
+    return response.json();
+  },
+
+  trackPdfDownload: async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/admin/logs/track-pdf', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.ok;
+  },
+
+  adminLogout: async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    await fetch('/api/admin/logout', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  },
+  
+  getManageAdmins: async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/admin/manage/admins', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch admins');
+    return response.json();
+  },
+
+  promoteToAdmin: async (userId: number) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/admin/manage/admins/${userId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to promote user');
+    return response.json();
+  },
+
+  deleteAdminProfile: async (userId: number) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/admin/manage/admins/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to delete admin profile');
+    return response.json();
+  },
+
+  downloadAdminsReport: async (selectedColumns: string[]) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/admin/manage/admins/report', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ selected_columns: selectedColumns })
+    });
+    if (!response.ok) throw new Error('Failed to download report');
+    return response.blob();
   }
 };
