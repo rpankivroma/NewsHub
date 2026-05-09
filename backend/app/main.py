@@ -22,11 +22,26 @@ def run_migrations():
     from sqlalchemy import text
     try:
         with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE visits ADD COLUMN country VARCHAR(100) NULL"))
+            # Check if columns exist first if possible, or use try-except
+            try:
+                conn.execute(text("ALTER TABLE visits ADD COLUMN country VARCHAR(100) NULL"))
+                conn.commit()
+            except: pass
+
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_super_admin BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("🚀 Database migrated: Added 'is_super_admin' to 'users'.")
+            except: pass
+
+            try:
+                conn.execute(text("UPDATE users SET is_super_admin = FALSE WHERE is_super_admin IS NULL"))
+                conn.commit()
+                print("🚀 Database migrated: Backfilled 'is_super_admin' in 'users'.")
+            except: pass
+
             conn.commit()
-            print("🚀 Database migrated: Added 'country' to 'visits'.")
     except Exception:
-        # Likely already exists
         pass
 
 run_migrations()
@@ -60,6 +75,7 @@ def seed_data():
                 hashed_password=get_password_hash("admin123"),
                 full_name="NewsHub Admin",
                 is_admin=True,
+                is_super_admin=True, # Make default admin a Super Admin
                 is_verified=True,
                 status="active",
                 newsletter_subscribed=True,
@@ -68,6 +84,12 @@ def seed_data():
             db.add(admin_user)
             db.commit()
             print("✅ Seeded admin user.")
+        else:
+            # Ensure existing default admin is super admin if not already
+            if not admin_user.is_super_admin:
+                admin_user.is_super_admin = True
+                db.commit()
+                print("✅ Updated default admin to Super Admin.")
 
         # Seed singletons
         if db.query(models.AboutPage).count() == 0:
