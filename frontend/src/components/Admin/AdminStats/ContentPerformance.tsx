@@ -1,6 +1,7 @@
 import React from 'react';
-import { FileText, TrendingUp, TrendingDown, Eye, Clock } from 'lucide-react';
+import { FileText, TrendingUp, TrendingDown, Eye, Clock, Calendar, List } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { CustomSelect } from '../../CustomSelect';
 
 interface ContentPerformanceProps {
   stats: any;
@@ -45,15 +46,17 @@ export const ContentPerformance: React.FC<ContentPerformanceProps> = ({
             <TrendingUp className="w-5 h-5 text-orange-500" />
             <h4>Top Viewed Articles</h4>
           </div>
-          <select 
+          <CustomSelect
+            icon={List}
             value={statsFilters.topLimit}
             onChange={(e) => setStatsFilters((prev: any) => ({...prev, topLimit: parseInt(e.target.value)}))}
-            className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-600 outline-none focus:ring-2 focus:ring-blue-100"
+            containerClassName="w-40"
+            className="py-2"
           >
             <option value={3}>Top 3</option>
             <option value={5}>Top 5</option>
             <option value={10}>Top 10</option>
-          </select>
+          </CustomSelect>
         </div>
         <div className="space-y-4">
           {stats.content.topViewed.map((art: any, i: number) => (
@@ -87,15 +90,17 @@ export const ContentPerformance: React.FC<ContentPerformanceProps> = ({
             <h4>Least Viewed Articles</h4>
           </div>
           <div className="flex gap-3">
-            <select 
+            <CustomSelect
+              icon={Calendar}
               value={statsFilters.days}
               onChange={(e) => setStatsFilters((prev: any) => ({...prev, days: parseInt(e.target.value)}))}
-              className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-600 outline-none focus:ring-2 focus:ring-blue-100"
+              containerClassName="w-48"
+              className="py-2"
             >
               <option value={7}>Last 7 days</option>
               <option value={30}>Last 30 days</option>
               <option value={90}>Last 90 days</option>
-            </select>
+            </CustomSelect>
           </div>
         </div>
         <div className="space-y-4">
