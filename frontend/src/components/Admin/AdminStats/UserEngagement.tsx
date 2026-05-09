@@ -1,7 +1,8 @@
 import React from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, Calendar } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '../../../lib/utils';
+import { CustomSelect } from '../../CustomSelect';
 
 interface UserEngagementProps {
   stats: any;
@@ -44,15 +45,16 @@ export const UserEngagement: React.FC<UserEngagementProps> = ({
             <Activity className="w-5 h-5 text-blue-500" />
             <h4>New Users Trend</h4>
           </div>
-          <select 
+          <CustomSelect
+            icon={Calendar}
             value={engagementTrendPeriod}
             onChange={(e) => setEngagementTrendPeriod(e.target.value)}
-            className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-600 outline-none"
+            className="py-2"
           >
             <option value="Daily">Daily</option>
             <option value="Weekly">Weekly</option>
             <option value="Monthly">Monthly</option>
-          </select>
+          </CustomSelect>
         </div>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
