@@ -3,6 +3,8 @@ import { X, Send, AlertCircle, CheckCircle, Camera, Image as ImageIcon } from 'l
 import { User, Category } from '../../types';
 import { newsService } from '../../services/newsService';
 import { userService } from '../../services/userService';
+import { CustomSelect } from '../CustomSelect';
+import { Filter } from 'lucide-react';
 
 interface SubmissionModalProps {
   isOpen: boolean;
@@ -149,17 +151,18 @@ export default function SubmissionModal({ isOpen, onClose, user, submissionToEdi
 
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700 ml-1">Category</label>
-                  <select
+                  <CustomSelect
+                    icon={Filter}
                     required
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-lg py-3.5 px-4 outline-none focus:border-blue-600 transition-all font-medium appearance-none"
+                    className="py-3"
                   >
                     <option value="">Select Category</option>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.name}>{cat.name}</option>
                     ))}
-                  </select>
+                  </CustomSelect>
                 </div>
               </div>
 
