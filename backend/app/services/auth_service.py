@@ -135,6 +135,10 @@ class AuthService:
         from sqlalchemy.sql import func
         user.last_login_at = func.now()
         db.commit()
+
+        if user.is_admin:
+            from ..repositories.admin_repository import AdminRepository
+            AdminRepository.create_log(db, user.id, "Admin Login", f"Admin {user.full_name} logged in successfully.")
             
         return user
 
