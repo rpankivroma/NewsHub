@@ -5,6 +5,7 @@ export interface User {
   bio?: string;
   avatar_url?: string;
   is_admin: boolean | number;
+  is_super_admin: boolean | number;
   is_verified: boolean | number;
   status: 'active' | 'blocked';
   interests?: string | string[];
