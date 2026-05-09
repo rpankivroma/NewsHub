@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import SearchInput from '../SearchInput';
 import Pagination from '../Pagination';
 import { adminService } from '../../services/adminService';
+import { CustomSelect } from '../CustomSelect';
 
 interface SubmissionManagerProps {
   handleUpdateSubmission: (id: number, status: string) => void;
@@ -65,22 +66,17 @@ export const SubmissionManager: React.FC<SubmissionManagerProps> = ({
               <SearchInput onSearch={(q) => { setSearch(q); setPage(0); }} placeholder="Search submissions..." />
             </div>
             
-            <div className="flex bg-gray-50 p-1 rounded-xl w-full sm:w-auto">
-              {['All', 'Pending', 'Approved', 'Rejected'].map(s => (
-                <button
-                  key={s}
-                  onClick={() => { setStatus(s); setPage(0); }}
-                  className={cn(
-                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                    status === s 
-                      ? "bg-white text-blue-600 shadow-sm" 
-                      : "text-gray-500 hover:text-gray-700"
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            <CustomSelect
+              icon={Filter}
+              value={status}
+              onChange={(e) => { setStatus(e.target.value); setPage(0); }}
+              containerClassName="w-full sm:w-48"
+            >
+              <option value="All">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </CustomSelect>
           </div>
         </div>
 
