@@ -24,6 +24,8 @@ import { UserManager } from '../components/Admin/UserManager';
 import { CategoryManager } from '../components/Admin/CategoryManager';
 import { DonationManager } from '../components/Admin/DonationManager';
 import { AboutPageManager } from '../components/Admin/AboutPageManager';
+import { Journal } from '../components/Admin/Journal';
+import { AdminManager } from '../components/Admin/AdminManager';
 
 interface AdminProps {
   user: User | null;
@@ -313,7 +315,10 @@ export default function Admin({ user }: AdminProps) {
     { id: 'dashboard', label: 'Statistics', icon: BarChart2 },
     { id: 'articles', label: 'Articles', icon: Newspaper },
     { id: 'submissions', label: `Submissions ${stats?.system.pendingArticles ? `(${stats.system.pendingArticles})` : ''}`, icon: UserIcon },
+    { id: 'categories', label: 'Categories', icon: LayoutDashboard },
+    { id: 'journal', label: 'Journal', icon: Activity },
     { id: 'users', label: 'Users', icon: Shield },
+    ...(user.is_super_admin ? [{ id: 'admins', label: 'Admins', icon: UserCheck }] : []),
     { id: 'donations', label: 'Donations', icon: DollarSign },
     { id: 'about', label: 'About', icon: Pencil },
   ];
@@ -421,6 +426,7 @@ export default function Admin({ user }: AdminProps) {
       });
 
       doc.save(`newshub-analytics-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      await adminService.trackPdfDownload().catch(console.error);
     } catch (err: any) {
       console.error('PDF Generation Error:', err);
       alert('Failed to generate PDF report: ' + err.message);
@@ -509,6 +515,7 @@ export default function Admin({ user }: AdminProps) {
 
       {activeTab === 'users' && (
         <UserManager 
+          user={user}
           handleToggleUserBlock={handleToggleUserBlock}
           totalUsersCount={stats?.engagement.totalUsers || 0}
         />
@@ -543,6 +550,10 @@ export default function Admin({ user }: AdminProps) {
           handleUpdateAboutPage={handleUpdateAboutPage}
         />
       )}
+
+      {activeTab === 'admins' && <AdminManager />}
+
+      {activeTab === 'journal' && <Journal />}
     </div>
   );
 }
