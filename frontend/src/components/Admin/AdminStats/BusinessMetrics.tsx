@@ -1,5 +1,6 @@
 import React from 'react';
-import { TrendingUp, Heart, MessageSquare } from 'lucide-react';
+import { TrendingUp, Heart, MessageSquare, Filter } from 'lucide-react';
+import { CustomSelect } from '../../CustomSelect';
 
 interface BusinessMetricsProps {
   stats: any;
@@ -37,15 +38,16 @@ export const BusinessMetrics: React.FC<BusinessMetricsProps> = ({
             <Heart className="w-5 h-5 text-pink-500" />
             <h4>Top Converting Articles</h4>
           </div>
-          <select 
+          <CustomSelect
+            icon={Filter}
             value={convertingMetric}
             onChange={(e) => setConvertingMetric(e.target.value)}
-            className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-600 outline-none"
+            className="py-2"
           >
             <option value="Total Engagement">Total Engagement</option>
             <option value="Likes">Likes</option>
             <option value="Comments">Comments</option>
-          </select>
+          </CustomSelect>
         </div>
         <div className="space-y-4">
           {stats.business.topConverting.map((art: any, i: number) => (
