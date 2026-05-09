@@ -60,3 +60,21 @@ class UserRepository:
         db.commit()
         db.refresh(user)
         return user
+
+    @staticmethod
+    def set_admin_status(db: Session, user_id: int, is_admin: bool) -> Optional[models.User]:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            user.is_admin = is_admin
+            db.commit()
+            db.refresh(user)
+        return user
+
+    @staticmethod
+    def delete_user(db: Session, user_id: int) -> bool:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            db.delete(user)
+            db.commit()
+            return True
+        return False
