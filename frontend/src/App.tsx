@@ -67,7 +67,11 @@ export default function App() {
     setIsAuthModalOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user?.is_admin) {
+      const { adminService } = await import('./services/adminService');
+      await adminService.adminLogout().catch(console.error);
+    }
     authService.logout();
     setUser(null);
     setCurrentPage('home');
