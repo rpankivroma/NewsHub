@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Search, Filter, Plus, Edit2, Trash2, Star, Eye, Heart, TrendingUp, X, Upload, Loader2, Image as ImageIcon, AlertCircle
+  Search, Filter, Plus, Edit2, Trash2, Star, Eye, Heart, TrendingUp, X, Upload, Loader2, Image as ImageIcon, AlertCircle, Hash
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Article, Category, User } from '../../types';
 import SearchInput from '../SearchInput';
 import Pagination from '../Pagination';
 import { adminService } from '../../services/adminService';
+import { CustomSelect } from '../CustomSelect';
 
 interface ArticleManagerProps {
   categories: Category[];
@@ -103,17 +104,15 @@ export const ArticleManager: React.FC<ArticleManagerProps> = ({
           <SearchInput onSearch={(q) => { setSearch(q); setPage(0); }} placeholder="Search articles..." />
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative group w-full md:w-64">
-            <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-            <select 
-              value={selectedTopic}
-              onChange={(e) => { setSelectedTopic(e.target.value); setPage(0); }}
-              className="w-full pl-12 pr-6 py-4 bg-gray-50/50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-gray-700 appearance-none cursor-pointer"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
-          </div>
+          <CustomSelect
+            icon={Filter}
+            value={selectedTopic}
+            onChange={(e) => { setSelectedTopic(e.target.value); setPage(0); }}
+            containerClassName="w-full md:w-64"
+          >
+            <option value="all">All Categories</option>
+            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+          </CustomSelect>
           <button 
             onClick={handleNewArticle}
             className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-95 whitespace-nowrap"
@@ -160,14 +159,14 @@ export const ArticleManager: React.FC<ArticleManagerProps> = ({
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-500 ml-1 uppercase tracking-wider">Category</label>
-                    <select 
+                    <CustomSelect
+                      icon={Hash}
                       required
                       value={currentArticle.category_id}
                       onChange={(e) => setCurrentArticle({...currentArticle, category_id: parseInt(e.target.value)})}
-                      className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-bold text-gray-900 appearance-none"
                     >
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
+                    </CustomSelect>
                   </div>
                 </div>
 
