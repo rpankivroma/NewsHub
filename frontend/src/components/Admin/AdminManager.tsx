@@ -28,7 +28,7 @@ const REPORT_COLUMNS = [
   { id: 'hours_month', label: 'Hours/Month' },
 ];
 
-export const AdminManager: React.FC = () => {
+export const AdminManager: React.FC<{ user: User | null }> = ({ user: currentUser }) => {
   const [admins, setAdmins] = useState<AdminStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -257,8 +257,14 @@ export const AdminManager: React.FC = () => {
                       <div className="flex justify-center">
                         <button
                           onClick={() => handleDeleteAdmin(admin.id)}
-                          className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                          title="Delete Admin"
+                          disabled={admin.id === currentUser?.id}
+                          className={cn(
+                            "p-3 text-gray-400 rounded-xl transition-all",
+                            admin.id === currentUser?.id 
+                              ? "opacity-30 cursor-not-allowed" 
+                              : "hover:text-red-600 hover:bg-red-50"
+                          )}
+                          title={admin.id === currentUser?.id ? "You cannot delete yourself" : "Delete Admin"}
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
