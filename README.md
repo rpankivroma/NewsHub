@@ -22,8 +22,9 @@ NewsHub is a comprehensive, production-grade digital news platform designed for 
 - **Personalized Profiles**: User dashboard to manage saved articles, contribution history, and preferences.
 
 ### 💰 Sustainability & Support
-- **Multi-channel Donations**: Integrated support for Credit/Debit Cards, Patreon, PayPal, and Cryptocurrency.
+- **Multi-channel Donations**: Secure integration for Credit/Debit Cards via **LiqPay**, along with support placeholders for Patreon, PayPal, and Cryptocurrency.
 - **Transparency Dashboard**: Real-time fundraising progress tracking towards community-driven goals.
+- **Donation History**: Public record of recent contributions with donor attribution.
 - **Campaign Management**: Backend tools to manage fundraising goals and transparency reports.
 
 ### 🛠 Administrative Control
@@ -90,7 +91,52 @@ NewsHub follows a modern full-stack architecture designed for scalability and ma
 | `GET` | `/api/articles/{id}` | Get detailed content for a specific story |
 | `POST` | `/api/submissions/` | Submit a news story for editorial review |
 | `GET` | `/api/donations/settings`| Fetch current fundraising goal & settings |
-| `POST` | `/api/donations/` | Process a new donation contribution |
+| `POST` | `/api/donations/` | Process a new donation contribution (Manual) |
+| `POST` | `/api/donations/payment` | Initialize LiqPay card payment session |
+| `POST` | `/api/donations/liqpay/callback` | LiqPay server-to-server payment webhook |
+
+---
+
+## 🔒 Environment Variables
+
+To run this project with full functionality, the following environment variables are required:
+
+```bash
+# Database Configuration
+DATABASE_URL=sqlite:///./database.db
+
+# JWT Configuration
+SECRET_KEY=your_secret_key_here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# LiqPay Configuration (Backend)
+LIQPAY_PUBLIC_KEY=your_public_key
+LIQPAY_PRIVATE_KEY=your_private_key
+LIQPAY_RESULT_URL=http://your-frontend.com/donate?status=success
+LIQPAY_SERVER_URL=http://your-backend.com/api/donations/liqpay/callback
+```
+
+## 🗄️ Database Architecture
+
+NewsHub uses **SQLAlchemy** as an ORM to provide a flexible data layer. By default, it is configured to use **SQLite** for easy development, but it can be easily switched to PostgreSQL or MySQL by updating the `DATABASE_URL`.
+
+### Key Data Models:
+- **User**: Manages authentication and user roles (Admin, Editor, Contributor).
+- **Article**: Stores news content, metadata, and status (Published, Draft).
+- **Category**: Organized news topics.
+- **Comment**: User-generated discussions on articles.
+- **Donation**: Tracks financial contributions and payment statuses.
+- **Submission**: Manages community-contributed news leads.
+
+Database models are defined in `backend/app/models/` and schemas for validation in `backend/app/schemas/`.
+
+## 📖 API Documentation
+
+The platform provides interactive API documentation powered by Swagger UI and ReDoc.
+
+- **Swagger UI**: [https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/docs](https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/docs)
+- **ReDoc**: [https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/redoc](https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/redoc)
 
 ---
 
