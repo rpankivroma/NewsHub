@@ -11,6 +11,10 @@ export default function Donate() {
   const [customAmount, setCustomAmount] = React.useState('');
   const [isDonating, setIsDonating] = React.useState(false);
   const [donationSuccess, setDonationSuccess] = React.useState(false);
+  const [successAmount, setSuccessAmount] = React.useState<number | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [donorName, setDonorName] = React.useState('');
+  const [donorEmail, setDonorEmail] = React.useState('');
 
   React.useEffect(() => {
     const fetchSettings = async () => {
@@ -24,28 +28,90 @@ export default function Donate() {
       }
     };
     fetchSettings();
+
+    // Check if we back from payment with status=success
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('status') === 'success') {
+      setDonationSuccess(true);
+      const amount = urlParams.get('amount');
+      if (amount) setSuccessAmount(parseFloat(amount));
+      
+      // Clear URL params without reloading
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
   }, []);
 
   const handleDonate = async () => {
+    const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
+    if (!amount || amount <= 0) {
+      setError("Please select or enter a valid donation amount.");
+      return;
+    }
+
+    setError(null);
     setIsDonating(true);
     try {
-      const response = await fetch('/api/donations/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: selectedAmount,
-          method: selectedMethod,
-          donor_email: 'demo@example.com' // Mock email
-        })
-      });
-      if (response.ok) {
-        setDonationSuccess(true);
-        // Refresh settings to show updated progress
-        const updatedSettings = await newsService.getDonationSettings();
-        setSettings(updatedSettings);
+      if (selectedMethod === 'card') {
+        const paymentData = await newsService.initDonationPayment(
+          amount, 
+          'USD', 
+          donorEmail || 'anonymous@example.com',
+          donorName || 'Anonymous Donor'
+        );
+        
+        // Create a hidden form and submit it to LiqPay
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://www.liqpay.ua/api/3/checkout';
+        form.acceptCharset = 'utf-8';
+        form.target = '_blank'; // Open in new tab to avoid iframe/security issues
+
+        if (paymentData.data) {
+          const dataInput = document.createElement('input');
+          dataInput.type = 'hidden';
+          dataInput.name = 'data';
+          dataInput.value = paymentData.data;
+          form.appendChild(dataInput);
+        }
+
+        if (paymentData.signature) {
+          const signatureInput = document.createElement('input');
+          signatureInput.type = 'hidden';
+          signatureInput.name = 'signature';
+          signatureInput.value = paymentData.signature;
+          form.appendChild(signatureInput);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        
+        // Show a message that user is being redirected
+        setError("Redirecting to checkout page. please check your new tab.");
+        setTimeout(() => setError(null), 5000);
+      } else {
+        // Handle other methods as before (demonstration only)
+        const response = await fetch('/api/donations/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amount,
+            method: selectedMethod,
+            status: 'success',
+            donor_email: donorEmail || 'demo@example.com',
+            donor_name: donorName || 'Anonymous Donor'
+          })
+        });
+        if (response.ok) {
+          setDonationSuccess(true);
+          const updatedSettings = await newsService.getDonationSettings();
+          setSettings(updatedSettings);
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || "An unexpected error occurred during payment initialization.");
     } finally {
       setIsDonating(false);
     }
@@ -62,11 +128,12 @@ export default function Donate() {
         </div>
         <h2 className="text-4xl font-black text-gray-900 mb-4">Thank You!</h2>
         <p className="text-gray-600 text-xl font-medium mb-10">
-          Your donation of <span className="text-green-600 font-black">${selectedAmount}</span> has been received. You're helping us make a difference.
+          Your donation of <span className="text-green-600 font-black">${successAmount || selectedAmount}</span> has been received. You're helping us make a difference.
         </p>
         <button 
           onClick={() => {
             setDonationSuccess(false);
+            setSuccessAmount(null);
             setSelectedAmount(25);
           }}
           className="px-10 py-4 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-xl shadow-gray-200"
@@ -162,6 +229,30 @@ export default function Donate() {
           <div className="space-y-10">
             {selectedMethod === 'card' && (
               <div className="animate-in fade-in duration-500 space-y-10">
+                {/* Donor Info */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-500 ml-1">Full Name (Optional)</label>
+                    <input 
+                      type="text"
+                      placeholder="John Doe"
+                      value={donorName}
+                      onChange={(e) => setDonorName(e.target.value)}
+                      className="w-full px-6 py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-medium outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-500 ml-1">Email (Optional)</label>
+                    <input 
+                      type="email"
+                      placeholder="john@example.com"
+                      value={donorEmail}
+                      onChange={(e) => setDonorEmail(e.target.value)}
+                      className="w-full px-6 py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-medium outline-none"
+                    />
+                  </div>
+                </div>
+
                 {/* Select Amount */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-6">Select Amount</h3>
@@ -208,6 +299,12 @@ export default function Donate() {
                 <div className="p-8 bg-[#f3f6ff] rounded-xl border border-blue-50">
                    <p className="text-[#3b59ff] text-lg font-medium">Your contribution: <span className="text-3xl font-black ml-1">${customAmount || selectedAmount}</span></p>
                 </div>
+
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 font-medium text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                    {error}
+                  </div>
+                )}
 
                 {/* Donate Button */}
                 <button 
@@ -287,7 +384,7 @@ export default function Donate() {
             )}
           </div>
 
-          <p className="text-center text-sm text-gray-400 mt-12 font-medium">This is a demo. No actual payment processing occurs.</p>
+          <p className="text-center text-sm text-gray-400 mt-12 font-medium">Payments are processed securely via LiqPay.</p>
         </div>
       </div>
     </div>
