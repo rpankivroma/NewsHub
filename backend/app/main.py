@@ -172,16 +172,16 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth.router)
-app.include_router(articles.router)
-app.include_router(categories.router)
-app.include_router(users.router)
-app.include_router(about.router)
-app.include_router(donations.router)
-app.include_router(admin.router)
-app.include_router(submissions.router)
-app.include_router(comments.router)
-app.include_router(analytics.router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(articles.router, prefix="/api")
+app.include_router(categories.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
+app.include_router(about.router, prefix="/api")
+app.include_router(donations.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(submissions.router, prefix="/api")
+app.include_router(comments.router, prefix="/api")
+app.include_router(analytics.router, prefix="/api")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
