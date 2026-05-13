@@ -176,12 +176,11 @@ export const DonationManager: React.FC<DonationManagerProps> = ({
                   </div>
                   <div>
                     <p className="text-lg font-extrabold text-gray-900">${d.amount.toFixed(2)}</p>
-                    <p className="text-sm text-gray-500">From <span className="font-bold text-gray-900">{d.full_name}</span> ({d.email})</p>
-                    {d.message && <p className="text-sm text-gray-400 italic mt-1">"{d.message}"</p>}
+                    <p className="text-sm text-gray-500">From <span className="font-bold text-gray-900">{d.donor_name || 'Anonymous'}</span> ({d.donor_email || 'No email'})</p>
                   </div>
                 </div>
                 <p className="text-sm text-gray-400 font-medium">
-                  {new Date(d.date).toLocaleDateString()}
+                  {new Date(d.timestamp).toLocaleDateString()}
                 </p>
               </div>
             ))}
