@@ -161,17 +161,17 @@ export const UserManager: React.FC<UserManagerProps> = ({
                           </span>
                         </div>
                       </div>
-                      <button
+                                            <button
                         onClick={() => onToggle(u.id)}
-                        disabled={Boolean((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin)}
+                        disabled={Boolean((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin || u.id === currentUser.id)}
                         className={cn(
                           "px-8 py-3 rounded-2xl font-extrabold text-sm transition-all active:scale-95",
                           u.status === 'blocked'
                             ? "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-100"
                             : "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-100",
-                          ((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin) && "opacity-50 cursor-not-allowed grayscale"
+                          ((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin || u.id === currentUser.id) && "opacity-50 cursor-not-allowed grayscale"
                         )}
-                        title={((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin) ? "Only Super Admin can block other admins" : ""}
+                        title={u.id === currentUser.id ? "You cannot block yourself" : ((u.is_admin || u.is_super_admin) && !currentUser.is_super_admin) ? "Only Super Admin can block other admins" : ""}
                       >
                         {u.status === 'blocked' ? 'Unblock' : 'Block'}
                       </button>
