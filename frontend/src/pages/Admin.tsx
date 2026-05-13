@@ -551,7 +551,7 @@ export default function Admin({ user }: AdminProps) {
         />
       )}
 
-      {activeTab === 'admins' && <AdminManager />}
+      {activeTab === 'admins' && <AdminManager user={user} />}
 
       {activeTab === 'journal' && <Journal />}
     </div>
