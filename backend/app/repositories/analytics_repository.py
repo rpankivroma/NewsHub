@@ -23,9 +23,7 @@ class AnalyticsRepository:
         return "Unknown"
 
     @staticmethod
-    def create_visit(db: Session, visit: schemas.VisitCreate, ip_address: str = None):
-        country = AnalyticsRepository.get_country_from_ip(ip_address)
-        print(f"📊 Tracking visit from IP: {ip_address} -> Country: {country}")
+    def create_visit_record(db: Session, visit: schemas.VisitCreate, ip_address: str = None, country: str = "Unknown"):
         db_visit = models.Visit(
             path=visit.path,
             device_type=visit.device_type,
