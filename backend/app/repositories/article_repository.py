@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from typing import List, Optional
 import json
-from ..services.email_service import send_newsletter_alert
 
 class ArticleRepository:
     @staticmethod
@@ -39,59 +38,12 @@ class ArticleRepository:
         return article
 
     @staticmethod
-    def create(db: Session, article: schemas.ArticleCreate, author_id: int, author_name: str) -> models.Article:
+    def create(db: Session, article: schemas.ArticleCreate, author_id: int) -> models.Article:
         db_article = models.Article(**article.dict(), author_id=author_id)
         db.add(db_article)
         db.commit()
         db.refresh(db_article)
-        
-        # Populate extra fields for response
-        db_article.author = author_name
-        cat = db.query(models.Category).filter(models.Category.id == db_article.category_id).first()
-        db_article.category = cat.name if cat else "Uncategorized"
-        db_article.date = db_article.created_at.strftime("%b %d, %Y")
-        
-        # Notify subscribed users
-        ArticleRepository._notify_subscribed_users(db, db_article)
-        
         return db_article
-
-    @staticmethod
-    def _notify_subscribed_users(db: Session, article: models.Article):
-        subscribed_users = db.query(models.User).filter(models.User.newsletter_subscribed == True).all()
-        
-        # Use the category name populated in the create method
-        category_name = getattr(article, 'category', '')
-        article_text = (article.title + " " + (article.excerpt or "") + " " + article.content).lower()
-
-        for user in subscribed_users:
-            # Parse interests
-            user_interests = []
-            if user.interests:
-                try:
-                    user_interests = json.loads(user.interests)
-                except:
-                    user_interests = [i.strip() for i in user.interests.split(",") if i.strip()]
-            
-            # Match by interest
-            match_interest = category_name in user_interests if category_name else False
-            
-            # Match by tags
-            match_tag = False
-            if not match_interest and user.tags:
-                user_tags = []
-                try:
-                    user_tags = json.loads(user.tags)
-                except:
-                    user_tags = [t.strip() for t in user.tags.split(",") if t.strip()]
-                
-                for tag in user_tags:
-                    if tag.lower() in article_text:
-                        match_tag = True
-                        break
-            
-            if match_interest or match_tag:
-                send_newsletter_alert(user.email, article.title, article.id)
 
     @staticmethod
     def update(db: Session, article_id: int, article_update: schemas.ArticleUpdate) -> Optional[models.Article]:
@@ -105,7 +57,6 @@ class ArticleRepository:
         
         db.commit()
         db.refresh(db_article)
-        ArticleRepository._populate_extra_fields(db_article)
         return db_article
 
     @staticmethod
@@ -122,6 +73,9 @@ class ArticleRepository:
     def get_personalized_feed(db: Session, interests: List[str], tags: List[str] = None, skip: int = 0, limit: int = 10, search: Optional[str] = None) -> List[models.Article]:
         from ..models.category import Category
         from sqlalchemy import or_
+
+        if not interests and not tags:
+            return []
 
         query = db.query(models.Article)
         
