@@ -160,7 +160,17 @@ export const authService = {
     });
 
     if (!response.ok) {
-        throw new Error('Request failed');
+        let errorDetail = 'Request failed';
+        const text = await response.text();
+        try {
+            if (text) {
+                const error = JSON.parse(text);
+                errorDetail = error.detail || errorDetail;
+            }
+        } catch (e) {
+            console.error('Failed to parse error JSON', e, 'Response text:', text);
+        }
+        throw new Error(errorDetail);
     }
 
     return response.json();
