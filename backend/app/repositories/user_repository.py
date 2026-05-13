@@ -22,10 +22,7 @@ class UserRepository:
         if status:
             query = query.filter(models.User.status == status)
             
-        users = query.order_by(models.User.joined_at.desc()).offset(skip).limit(limit).all()
-        for u in users:
-            u.saved_articles_count = 0 # Placeholder for now
-        return users
+        return query.order_by(models.User.joined_at.desc()).offset(skip).limit(limit).all()
 
     @staticmethod
     def get_by_id(db: Session, user_id: int) -> Optional[models.User]:
@@ -34,18 +31,6 @@ class UserRepository:
     @staticmethod
     def get_by_email(db: Session, email: str) -> Optional[models.User]:
         return db.query(models.User).filter(models.User.email == email).first()
-
-    @staticmethod
-    def toggle_block(db: Session, user_id: int) -> Optional[models.User]:
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        if user:
-            if user.status == "blocked":
-                user.status = "active"
-            else:
-                user.status = "blocked"
-            db.commit()
-            db.refresh(user)
-        return user
 
     @staticmethod
     def update(db: Session, user_id: int, user_update: schemas.UserUpdate) -> Optional[models.User]:
@@ -59,15 +44,6 @@ class UserRepository:
         
         db.commit()
         db.refresh(user)
-        return user
-
-    @staticmethod
-    def set_admin_status(db: Session, user_id: int, is_admin: bool) -> Optional[models.User]:
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        if user:
-            user.is_admin = is_admin
-            db.commit()
-            db.refresh(user)
         return user
 
     @staticmethod
