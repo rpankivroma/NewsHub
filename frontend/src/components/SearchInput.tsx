@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 
 interface SearchInputProps {
@@ -10,13 +10,20 @@ interface SearchInputProps {
 
 export default function SearchInput({ onSearch, placeholder = "Search...", initialValue = "", className = "" }: SearchInputProps) {
   const [value, setValue] = useState(initialValue);
+  const onSearchRef = useRef(onSearch);
+
+  // Update ref when prop changes
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
 
   useEffect(() => {
+    // Prevent initial search if value is empty and it wasn't explicitly changed
     const timer = setTimeout(() => {
-      onSearch(value);
+      onSearchRef.current(value);
     }, 500);
     return () => clearTimeout(timer);
-  }, [value, onSearch]);
+  }, [value]);
 
   return (
     <div className={`relative ${className}`}>
