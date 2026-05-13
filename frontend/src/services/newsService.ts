@@ -102,5 +102,15 @@ export const newsService = {
     });
     if (!response.ok) throw new Error('Failed to delete comment');
     return response.json();
+  },
+
+  initDonationPayment: async (amount: number, currency: string = "USD", email?: string, name?: string) => {
+    const response = await fetch('/api/donations/payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, currency, email, name })
+    });
+    if (!response.ok) throw new Error('Failed to initialize payment');
+    return response.json();
   }
 };
