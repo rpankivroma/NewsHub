@@ -82,8 +82,10 @@ class AuthService:
     async def forgot_password(db: Session, email: str):
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            # We don't want to reveal if a user exists or not for security
-            return {"message": "If this email is registered, a reset code has been sent."}
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Email not found. Please sign up."
+            )
             
         # Use verification_code field for reset code as well (reusing the mechanism)
         reset_code = AuthService.generate_verification_code()
@@ -94,7 +96,7 @@ class AuthService:
         # For simplicity, sending a "verification" code which the user uses to reset password.
         send_verification_email(user.email, reset_code)
         
-        return {"message": "If this email is registered, a reset code has been sent."}
+        return {"message": "A reset code has been sent to your email."}
 
     @staticmethod
     async def reset_password(db: Session, reset_data: any):
