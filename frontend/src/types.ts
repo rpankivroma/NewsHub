@@ -58,10 +58,10 @@ export interface Comment {
 export interface Donation {
   id: number;
   amount: number;
-  full_name: string;
-  email: string;
-  message?: string;
-  date: string;
+  status: string;
+  donor_name?: string;
+  donor_email?: string;
+  timestamp: string;
 }
 
 export interface DonationSettings {
