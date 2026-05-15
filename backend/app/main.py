@@ -80,7 +80,7 @@ def seed_data():
                 is_verified=True,
                 status="active",
                 newsletter_subscribed=True,
-                joined_at=datetime.datetime.now()
+                joined_at=datetime.datetime.now(datetime.timezone.utc)
             )
             db.add(admin_user)
             db.commit()
@@ -131,7 +131,7 @@ def seed_data():
         if db.query(models.Visit).count() == 0:
             print("🌱 Seeding visits data...")
             for i in range(30): # Last 30 days
-                date = datetime.datetime.now() - datetime.timedelta(days=i)
+                date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=i)
                 # Random visits per day
                 num_visits = random.randint(10, 50)
                 for _ in range(num_visits):

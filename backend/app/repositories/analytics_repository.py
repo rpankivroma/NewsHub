@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from .. import models, schemas
-from datetime import datetime
+from datetime import datetime, timezone
 
 import urllib.request
 import json
@@ -30,7 +30,7 @@ class AnalyticsRepository:
             is_new_user=visit.is_new_user,
             ip_address=ip_address,
             country=country,
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
         db.add(db_visit)
         db.commit()

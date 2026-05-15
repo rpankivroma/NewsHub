@@ -2,14 +2,13 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional, Tuple
 import pandas as pd
 import io
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from ..repositories.admin_repository import AdminRepository
 from ..models import User
 
 class AdminService:
     @staticmethod
     def get_stats(db: Session, days: int = 30, top_limit: int = 5, category_filter: str = "All", traffic_trend_days: int = 7) -> Dict[str, Any]:
-        from datetime import datetime, timedelta
         from sqlalchemy import func, case, desc
         from ..models.category import Category
         from ..models.article_model import Article
@@ -19,8 +18,8 @@ class AdminService:
         from ..models.submission_model import Submission
         from ..models import AdminLog
 
-        start_date = datetime.now() - timedelta(days=days)
-        traffic_trend_start = datetime.now() - timedelta(days=traffic_trend_days)
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+        traffic_trend_start = datetime.now(timezone.utc) - timedelta(days=traffic_trend_days)
         
         # Base query for articles honoring category filter and date
         article_q = db.query(Article).filter(Article.created_at >= start_date)
@@ -46,7 +45,7 @@ class AdminService:
         
         new_users_trend = [{"date": str(d.date), "count": d.count} for d in new_users_data]
         
-        active_cutoff = datetime.now() - timedelta(days=30)
+        active_cutoff = datetime.now(timezone.utc) - timedelta(days=30)
         active_users = db.query(User).filter(User.last_login_at >= active_cutoff).count()
         
         avg_likes = db.query(func.avg(Article.likes)).scalar() or 0
@@ -55,7 +54,7 @@ class AdminService:
 
         visits_q = db.query(Visit).filter(Visit.timestamp >= start_date)
         total_visits = visits_q.count()
-        today_visits = db.query(Visit).filter(Visit.timestamp >= datetime.now().replace(hour=0, minute=0, second=0)).count()
+        today_visits = db.query(Visit).filter(Visit.timestamp >= datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)).count()
         
         device_dist = db.query(
             Visit.device_type,
@@ -221,14 +220,13 @@ class AdminService:
 
     @staticmethod
     def get_admins_with_stats(db: Session) -> Dict[str, Any]:
-        from datetime import datetime, timedelta
         from ..models.user import User
         from ..models import AdminLog
 
         admins = db.query(User).filter(User.is_admin == True).all()
         
         results = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_start = today_start - timedelta(days=now.weekday())
         month_start = today_start.replace(day=1)
@@ -283,10 +281,10 @@ class AdminService:
 
     @staticmethod
     def generate_admins_report(db: Session, selected_columns: List[str]) -> Tuple[io.BytesIO, str]:
-        admins_data = AdminRepository.get_admins_with_stats(db)["admins"]
+        admins_data = AdminService.get_admins_with_stats(db)["admins"]
         
         report_data = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         for admin in admins_data:
             row = {}
             if "full_name" in selected_columns: row["Full name"] = admin["full_name"]

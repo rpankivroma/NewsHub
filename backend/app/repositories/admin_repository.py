@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from .. import models
 
 class AdminRepository:
@@ -9,7 +9,7 @@ class AdminRepository:
             admin_id=admin_id,
             action=action,
             details=details,
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
         db.add(log)
         db.commit()

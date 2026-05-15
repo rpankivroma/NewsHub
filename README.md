@@ -47,9 +47,19 @@ NewsHub follows a modern full-stack architecture designed for scalability and ma
 
 ### Backend
 - **Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python)
-- **Database**: [SQLAlchemy](https://www.sqlalchemy.org/) ORM with SQLite (standard) or MySQL (XAMPP).
+- **Database**: [SQLAlchemy](https://www.sqlalchemy.org/) ORM with **PostgreSQL** (Production) or SQLite (Development).
 - **Validation**: [Pydantic](https://docs.pydantic.dev/) for strict data typing and serialization.
 - **Authentication**: JWT (JSON Web Tokens) with Secure Hashing.
+
+---
+
+## 🌍 Production Environment
+
+The application is deployed across several cloud providers for optimal performance and reliability:
+
+- **Frontend**: Hosted on **Vercel** ([https://news-hub-two-pi.vercel.app/](https://news-hub-two-pi.vercel.app/))
+- **Backend API**: Hosted on **Render** ([https://newshub-kodq.onrender.com/](https://newshub-kodq.onrender.com/))
+- **Database**: Managed **PostgreSQL** by **Neon** ([https://neon.tech/](https://neon.tech/))
 
 ---
 
@@ -103,7 +113,7 @@ To run this project with full functionality, the following environment variables
 
 ```bash
 # Database Configuration
-DATABASE_URL=sqlite:///./database.db
+DATABASE_URL=postgresql://user:pass@ep-hostname.region.aws.neon.tech/neondb?sslmode=require
 
 # JWT Configuration
 SECRET_KEY=your_secret_key_here
@@ -119,7 +129,7 @@ LIQPAY_SERVER_URL=http://your-backend.com/api/donations/liqpay/callback
 
 ## 🗄️ Database Architecture
 
-NewsHub uses **SQLAlchemy** as an ORM to provide a flexible data layer. By default, it is configured to use **SQLite** for easy development, but it can be easily switched to PostgreSQL or MySQL by updating the `DATABASE_URL`.
+NewsHub uses **SQLAlchemy** as an ORM to provide a flexible data layer. In production, it uses **PostgreSQL (Neon)** for scalability and reliability. For local development, it can fallback to **SQLite**.
 
 ### Key Data Models:
 - **User**: Manages authentication and user roles (Admin, Editor, Contributor).
@@ -135,8 +145,8 @@ Database models are defined in `backend/app/models/` and schemas for validation 
 
 The platform provides interactive API documentation powered by Swagger UI and ReDoc.
 
-- **Swagger UI**: [https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/docs](https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/docs)
-- **ReDoc**: [https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/redoc](https://ais-dev-yeubv4vz42u2xtwmyi5qc4-38648214756.europe-west2.run.app/redoc)
+- **Swagger UI**: [https://newshub-kodq.onrender.com/docs](https://newshub-kodq.onrender.com/docs)
+- **ReDoc**: [https://newshub-kodq.onrender.com/redoc](https://newshub-kodq.onrender.com/redoc)
 
 ---
 
