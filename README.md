@@ -107,25 +107,6 @@ The application is deployed across several cloud providers for optimal performan
 
 ---
 
-## 🔒 Environment Variables
-
-To run this project with full functionality, the following environment variables are required:
-
-```bash
-# Database Configuration
-DATABASE_URL=postgresql://user:pass@ep-hostname.region.aws.neon.tech/neondb?sslmode=require
-
-# JWT Configuration
-SECRET_KEY=your_secret_key_here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-
-# LiqPay Configuration (Backend)
-LIQPAY_PUBLIC_KEY=your_public_key
-LIQPAY_PRIVATE_KEY=your_private_key
-LIQPAY_RESULT_URL=http://your-frontend.com/donate?status=success
-LIQPAY_SERVER_URL=http://your-backend.com/api/donations/liqpay/callback
-```
 
 ## 🗄️ Database Architecture
 
