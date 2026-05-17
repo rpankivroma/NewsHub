@@ -104,11 +104,11 @@ export const newsService = {
     return response.json();
   },
 
-  initDonationPayment: async (amount: number, currency: string = "USD", email?: string, name?: string) => {
+  initDonationPayment: async (amount: number, currency: string = "USD", email?: string, name?: string, resultUrl?: string) => {
     const response = await fetch('/api/donations/payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, currency, email, name })
+      body: JSON.stringify({ amount, currency, email, name, result_url: resultUrl })
     });
     if (!response.ok) throw new Error('Failed to initialize payment');
     return response.json();
