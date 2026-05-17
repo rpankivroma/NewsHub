@@ -57,7 +57,8 @@ export default function Donate() {
           amount, 
           'USD', 
           donorEmail || 'anonymous@example.com',
-          donorName || 'Anonymous Donor'
+          donorName || 'Anonymous Donor',
+          window.location.origin + window.location.pathname + '?status=success'
         );
         
         // Create a hidden form and submit it to LiqPay
