@@ -16,24 +16,44 @@ SMTP_FROM = os.getenv("SMTP_FROM", "").strip('"').strip("'")
 BASE_URL = os.getenv("BASE_URL", "http://localhost:3000")
 
 def get_smtp_connection():
-    """Helper to create SMTP connection with fallback for network issues."""
+    """Helper to create SMTP connection with explicit IPv4 resolution and fallback hosts."""
+    hosts_to_try = [SMTP_HOST]
+    if SMTP_HOST == "smtp.gmail.com":
+        hosts_to_try.append("smtp.googlemail.com")
+    
+    last_exception = None
+    
+    for host in hosts_to_try:
+        print(f"Attempting connection to {host}:{SMTP_PORT}...")
+        try:
+            # Try explicit IPv4 first to avoid IPv6-related Errno 101
+            addr_info = socket.getaddrinfo(host, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
+            for info in addr_info:
+                addr = info[4][0]
+                try:
+                    print(f"Trying {host} via IPv4 {addr}...")
+                    if SMTP_PORT == 465:
+                        return smtplib.SMTP_SSL(addr, SMTP_PORT, timeout=20)
+                    else:
+                        # For 587/STARTTLS, we connect then call starttls
+                        return smtplib.SMTP(addr, SMTP_PORT, timeout=20)
+                except Exception as e:
+                    print(f"Connection to {addr} failed: {e}")
+                    last_exception = e
+                    continue
+        except Exception as e:
+            print(f"Resolution failed for {host}: {e}")
+            last_exception = e
+            
+    # Final fallback attempt with original host (defaults to OS resolution)
     try:
+        print(f"Final attempt with original host path: {SMTP_HOST}")
         if SMTP_PORT == 465:
-            return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15)
+            return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20)
         else:
-            return smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
-    except OSError as e:
-        if e.errno == 101: # Network unreachable, likely IPv6 issues
-            print(f"Network unreachable for {SMTP_HOST}, attempting IPv4 fallback...")
-            try:
-                # Force resolve to IPv4
-                ipv4_host = socket.gethostbyname(SMTP_HOST)
-                if SMTP_PORT == 465:
-                    return smtplib.SMTP_SSL(ipv4_host, SMTP_PORT, timeout=15)
-                else:
-                    return smtplib.SMTP(ipv4_host, SMTP_PORT, timeout=15)
-            except Exception as inner_e:
-                print(f"IPv4 fallback failed: {inner_e}")
+            return smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20)
+    except Exception as e:
+        print(f"All SMTP connection attempts failed: {e}")
         raise e
 
 def send_verification_email(to_email: str, code: str):
@@ -73,7 +93,7 @@ def send_verification_email(to_email: str, code: str):
     try:
         server = get_smtp_connection()
         if SMTP_PORT != 465:
-            server.starttls()
+            server.starttls(server_hostname=SMTP_HOST)
         
         server.login(SMTP_USER, SMTP_PASSWORD)
         text = msg.as_string()
@@ -81,7 +101,7 @@ def send_verification_email(to_email: str, code: str):
         server.quit()
         return True
     except Exception as e:
-        print(f"Error sending email (Host: {SMTP_HOST}, Port: {SMTP_PORT}): {e}")
+        print(f"Error sending email (Target: {to_email}): {e}")
         return False
 
 def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
@@ -129,7 +149,7 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
     try:
         server = get_smtp_connection()
         if SMTP_PORT != 465:
-            server.starttls()
+            server.starttls(server_hostname=SMTP_HOST)
         
         server.login(SMTP_USER, SMTP_PASSWORD)
         text = msg.as_string()
@@ -137,5 +157,5 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
         server.quit()
         return True
     except Exception as e:
-        print(f"Error sending newsletter alert (Host: {SMTP_HOST}, Port: {SMTP_PORT}): {e}")
+        print(f"Error sending newsletter alert (Target: {to_email}): {e}")
         return False
