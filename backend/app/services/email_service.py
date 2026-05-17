@@ -2,17 +2,39 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import socket
 from dotenv import load_dotenv
 
 load_dotenv()
 
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM = os.getenv("SMTP_FROM")
+SMTP_USER = os.getenv("SMTP_USER", "").strip('"').strip("'")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip('"').strip("'")
+SMTP_FROM = os.getenv("SMTP_FROM", "").strip('"').strip("'")
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:3000")
+
+def get_smtp_connection():
+    """Helper to create SMTP connection with fallback for network issues."""
+    try:
+        if SMTP_PORT == 465:
+            return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15)
+        else:
+            return smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
+    except OSError as e:
+        if e.errno == 101: # Network unreachable, likely IPv6 issues
+            print(f"Network unreachable for {SMTP_HOST}, attempting IPv4 fallback...")
+            try:
+                # Force resolve to IPv4
+                ipv4_host = socket.gethostbyname(SMTP_HOST)
+                if SMTP_PORT == 465:
+                    return smtplib.SMTP_SSL(ipv4_host, SMTP_PORT, timeout=15)
+                else:
+                    return smtplib.SMTP(ipv4_host, SMTP_PORT, timeout=15)
+            except Exception as inner_e:
+                print(f"IPv4 fallback failed: {inner_e}")
+        raise e
 
 def send_verification_email(to_email: str, code: str):
     if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
@@ -49,15 +71,17 @@ def send_verification_email(to_email: str, code: str):
     msg.attach(MIMEText(html_body, 'html'))
     
     try:
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
+        server = get_smtp_connection()
+        if SMTP_PORT != 465:
+            server.starttls()
+        
         server.login(SMTP_USER, SMTP_PASSWORD)
         text = msg.as_string()
         server.sendmail(SMTP_FROM, to_email, text)
         server.quit()
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"Error sending email (Host: {SMTP_HOST}, Port: {SMTP_PORT}): {e}")
         return False
 
 def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
@@ -87,7 +111,7 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
             <h3 style="margin-top: 0; color: #111827; font-size: 20px;">{article_title}</h3>
             <p style="color: #6b7280; font-size: 14px; margin-bottom: 0;">Discover the latest developments in your feed.</p>
           </div>
-
+ 
           <a href="{article_url}" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: background-color 0.2s;">
             Read Full Article
           </a>
@@ -103,13 +127,15 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
     msg.attach(MIMEText(html_body, 'html'))
     
     try:
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
+        server = get_smtp_connection()
+        if SMTP_PORT != 465:
+            server.starttls()
+        
         server.login(SMTP_USER, SMTP_PASSWORD)
         text = msg.as_string()
         server.sendmail(SMTP_FROM, to_email, text)
         server.quit()
         return True
     except Exception as e:
-        print(f"Error sending newsletter alert: {e}")
+        print(f"Error sending newsletter alert (Host: {SMTP_HOST}, Port: {SMTP_PORT}): {e}")
         return False
