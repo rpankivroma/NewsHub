@@ -42,11 +42,11 @@ export default function ProfileHeader({ user, isEditing, setIsEditing, onSave, o
       {/* Banner */}
       <div className="h-48 w-full bg-blue-600" />
       
-      <div className="px-10 pb-10">
-        <div className="relative flex items-center justify-between -mt-16 mb-6">
+      <div className="px-6 md:px-10 pb-6 md:pb-10">
+        <div className="relative flex flex-col md:flex-row items-center justify-between -mt-12 md:-mt-16 mb-6 gap-4">
           <div className="relative group">
             <div 
-              className={`w-36 h-36 rounded-full border-[6px] border-white bg-white overflow-hidden shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
+              className={`w-24 h-24 md:w-36 md:h-36 rounded-full border-[4px] md:border-[6px] border-white bg-white overflow-hidden shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
               onClick={handlePhotoClick}
             >
               {uploading ? (
@@ -102,9 +102,9 @@ export default function ProfileHeader({ user, isEditing, setIsEditing, onSave, o
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <h1 className="text-[2.25rem] font-black text-gray-900 leading-tight tracking-tight">{user.full_name}</h1>
-          <div className="flex items-center gap-5 text-sm text-gray-500 font-bold">
+        <div className="space-y-1.5 text-center md:text-left">
+          <h1 className="text-3xl md:text-[2.25rem] font-black text-gray-900 leading-tight tracking-tight">{user.full_name}</h1>
+          <div className="flex flex-col md:flex-row items-center gap-3 md:gap-5 text-sm text-gray-500 font-bold">
             <span className="flex items-center gap-2 text-gray-400">
               <Mail className="w-4 h-4" /> 
               <span className="text-gray-500">{user.email}</span>

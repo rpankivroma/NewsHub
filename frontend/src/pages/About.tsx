@@ -30,39 +30,39 @@ export default function About() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-16">
-      <div className="text-center mb-16">
-        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200">
-           <Newspaper className="w-10 h-10 text-white" />
+    <div className="max-w-5xl mx-auto px-4 py-8 md:py-16">
+      <div className="text-center mb-12 md:mb-16">
+        <div className="w-12 h-12 md:w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200">
+           <Newspaper className="w-8 h-8 md:w-10 h-10 text-white" />
         </div>
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">{data.title}</h1>
-        <p className="text-xl text-gray-500 font-medium">{data.subtitle}</p>
+        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">{data.title}</h1>
+        <p className="text-lg md:text-xl text-gray-500 font-medium">{data.subtitle}</p>
       </div>
 
-      <div className="bg-white rounded-[2rem] p-10 md:p-16 border border-gray-100 shadow-sm mb-16">
-        <div className="prose prose-lg max-w-none text-gray-600 leading-relaxed space-y-8">
+      <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-6 md:p-16 border border-gray-100 shadow-sm mb-12 md:mb-16">
+        <div className="prose prose-lg max-w-none text-gray-600 leading-relaxed space-y-6 md:space-y-8">
            {data.main_content.split('\n\n').map((para: string, i: number) => (
              <p key={i}>{para}</p>
            ))}
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8 mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-16">
         {missionItems.map((item, i) => (
-          <div key={i} className="bg-white p-10 rounded-[2rem] border border-gray-100 shadow-sm text-center">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <item.icon className="w-8 h-8 text-blue-600" />
+          <div key={i} className="bg-white p-8 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border border-gray-100 shadow-sm text-center">
+            <div className="w-12 h-12 md:w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
+              <item.icon className="w-6 h-6 md:w-8 h-8 text-blue-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">{item.title}</h3>
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2 md:mb-4">{item.title}</h3>
             <p className="text-gray-500 text-sm leading-relaxed">{item.text}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-blue-50/50 rounded-[2rem] border border-blue-100 p-10 md:p-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-10 text-center">Contact Us</h2>
-        <div className="grid md:grid-cols-2 gap-12">
-          <div className="space-y-8">
+      <div className="bg-blue-50/50 rounded-[1.5rem] md:rounded-[2rem] border border-blue-100 p-8 md:p-16">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 md:mb-10 text-center">Contact Us</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+          <div className="space-y-6 md:space-y-8">
             <div className="flex items-start gap-4">
               <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex-shrink-0">
                 <Mail className="w-6 h-6 text-blue-600" />

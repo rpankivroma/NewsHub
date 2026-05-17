@@ -100,7 +100,7 @@ export default function Profile({ user, onUserUpdate, onArticleClick }: ProfileP
         submissionsCount={0} 
       />
 
-      <div className="bg-white rounded-[1rem] border border-gray-100 shadow-sm p-10 md:p-12 mb-12 min-h-[400px]">
+      <div className="bg-white rounded-[1rem] border border-gray-100 shadow-sm p-6 md:p-12 mb-8 md:mb-12 min-h-[400px]">
         {activeTab === 'about' && (
           <AboutTab 
             user={user}

@@ -443,25 +443,25 @@ export default function Admin({ user }: AdminProps) {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto px-10 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-[#0f172a]">Admin Panel</h1>
+    <div className="max-w-[1600px] mx-auto px-4 md:px-10 py-6 md:py-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-[#0f172a]">Admin Panel</h1>
         {isLoading && <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />}
       </div>
 
-      <div className="flex gap-4 mb-10 overflow-x-auto pb-4 scrollbar-hide">
+      <div className="flex gap-2 md:gap-4 mb-8 md:mb-10 overflow-x-auto pb-2 md:pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
          {adminTabs.map(tab => (
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-3 px-6 py-3.5 rounded-2xl font-semibold text-sm transition-all whitespace-nowrap",
+                "flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl font-semibold text-xs md:text-sm transition-all whitespace-nowrap",
                 activeTab === tab.id 
                   ? "bg-[#3b82f6] text-white shadow-md shadow-blue-100" 
                   : "bg-white text-gray-600 border border-gray-100 hover:bg-gray-50"
               )}
             >
-               <tab.icon className="w-5 h-5 flex-shrink-0" />
+               <tab.icon className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
                <span>{tab.label}</span>
             </button>
          ))}

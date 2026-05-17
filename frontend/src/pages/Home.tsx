@@ -75,11 +75,11 @@ export default function Home({ onArticleClick }: HomeProps) {
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Browse by Topic</h2>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap gap-3">
             <button 
               onClick={() => handleTopicChange('All')}
               className={cn(
-                "px-5 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm",
+                "px-5 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm whitespace-nowrap",
                 selectedTopic === 'All' 
                   ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
                   : "bg-white border-gray-100 text-gray-600 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50"
@@ -92,7 +92,7 @@ export default function Home({ onArticleClick }: HomeProps) {
                 key={category.id} 
                 onClick={() => handleTopicChange(category.name)}
                 className={cn(
-                  "px-5 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm",
+                  "px-5 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm whitespace-nowrap",
                   selectedTopic === category.name 
                     ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
                     : "bg-white border-gray-100 text-gray-600 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50"

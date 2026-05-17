@@ -154,11 +154,11 @@ export default function ArticleDetail({ articleId, onBack, user, onLoginClick }:
         <img 
           src={article.image_url || article.imageUrl} 
           alt={article.title} 
-          className="w-full aspect-[21/9] object-cover"
+          className="w-full aspect-[16/9] md:aspect-[21/9] object-cover"
         />
         
-        <div className="p-8 md:p-12">
-          <div className="flex items-center gap-3 mb-6">
+        <div className="p-6 md:p-12">
+          <div className="flex flex-wrap items-center gap-3 mb-4 md:mb-6">
             <span className="px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">
               {article.category}
             </span>
@@ -169,11 +169,11 @@ export default function ArticleDetail({ articleId, onBack, user, onLoginClick }:
             )}
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
+          <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
             {article.title}
           </h1>
 
-          <div className="flex items-center gap-6 text-sm text-gray-500 mb-8 border-b border-gray-100 pb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 text-sm text-gray-500 mb-8 border-b border-gray-100 pb-8">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
                 <User className="w-5 h-5 text-blue-600" />
@@ -193,8 +193,8 @@ export default function ArticleDetail({ articleId, onBack, user, onLoginClick }:
           </div>
 
           <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed mb-12">
-             <div className="bg-gray-50 p-8 rounded-3xl border-l-8 border-blue-600 mb-8">
-                <p className="text-xl font-medium text-gray-900 leading-relaxed italic">{article.excerpt || article.content.substring(0, 150) + '...'}</p>
+             <div className="bg-gray-50 p-6 md:p-8 rounded-2xl md:rounded-3xl border-l-8 border-blue-600 mb-8">
+                <p className="text-lg md:text-xl font-medium text-gray-900 leading-relaxed italic">{article.excerpt || article.content.substring(0, 150) + '...'}</p>
              </div>
              <div className="space-y-6">
                {article.content.split('\n').map((p, i) => (
@@ -206,13 +206,13 @@ export default function ArticleDetail({ articleId, onBack, user, onLoginClick }:
              </div>
           </div>
 
-          <div className="flex items-center justify-between py-6 border-y border-gray-100">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between py-6 border-y border-gray-100 gap-6">
+            <div className="flex items-center gap-3 md:gap-4">
               <button 
                 onClick={handleLike}
                 disabled={isProcessing}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
+                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
                   interactions.liked 
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
                     : "bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600"
@@ -224,7 +224,7 @@ export default function ArticleDetail({ articleId, onBack, user, onLoginClick }:
                 onClick={handleDislike}
                 disabled={isProcessing}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
+                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
                   interactions.disliked 
                     ? "bg-red-600 text-white shadow-lg shadow-red-100" 
                     : "bg-gray-50 text-gray-700 hover:bg-red-50 hover:text-red-600"
@@ -237,7 +237,7 @@ export default function ArticleDetail({ articleId, onBack, user, onLoginClick }:
               onClick={handleSave}
               disabled={isProcessing}
               className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
+                "w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95",
                 interactions.saved 
                   ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" 
                   : "bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700"

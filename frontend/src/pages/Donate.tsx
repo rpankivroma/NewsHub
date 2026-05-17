@@ -174,10 +174,10 @@ export default function Donate() {
       </div>
 
       <div className="bg-white rounded-xl shadow-2xl shadow-gray-200/40 border border-gray-100 overflow-hidden mb-12 animate-in fade-in zoom-in duration-500">
-        <div className="p-8 md:p-12">
+        <div className="p-6 md:p-12">
           {/* Campaign Progress Section */}
           <div className="mb-10">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
               <h3 className="text-lg font-bold text-gray-700">Campaign Progress</h3>
               <div className="flex items-center gap-1">
                 <span className="text-[#3b59ff] text-xl font-black">${settings.current_amount.toLocaleString()}</span>
@@ -206,20 +206,20 @@ export default function Donate() {
           {/* Choose Donation Method */}
           <div className="mb-10">
             <h3 className="text-lg font-bold text-gray-800 mb-6">Choose Donation Method</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {availableMethods.map(method => (
                 <button
                   key={method.id}
                   onClick={() => setSelectedMethod(method.id)}
                   className={cn(
-                    "flex items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 h-20 group relative",
+                    "flex items-center justify-center p-4 md:p-6 rounded-xl border-2 transition-all gap-3 h-16 md:h-20 group relative",
                     selectedMethod === method.id 
                       ? "border-[#3b59ff] bg-[#f0f3ff] text-[#3b59ff]" 
                       : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
                   )}
                 >
-                  <span className="text-xl group-hover:scale-125 transition-transform">{method.iconLabel}</span>
-                  <span className="text-lg font-bold">{method.name}</span>
+                  <span className="text-lg md:text-xl group-hover:scale-125 transition-transform">{method.iconLabel}</span>
+                  <span className="text-base md:text-lg font-bold">{method.name}</span>
                 </button>
               ))}
             </div>
@@ -228,9 +228,9 @@ export default function Donate() {
           {/* Content Area */}
           <div className="space-y-10">
             {selectedMethod === 'card' && (
-              <div className="animate-in fade-in duration-500 space-y-10">
+              <div className="animate-in fade-in duration-500 space-y-8 md:space-y-10">
                 {/* Donor Info */}
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-500 ml-1">Full Name (Optional)</label>
                     <input 
@@ -238,7 +238,7 @@ export default function Donate() {
                       placeholder="John Doe"
                       value={donorName}
                       onChange={(e) => setDonorName(e.target.value)}
-                      className="w-full px-6 py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-medium outline-none"
+                      className="w-full px-5 md:px-6 py-3 md:py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-medium outline-none"
                     />
                   </div>
                   <div className="space-y-2">
@@ -248,7 +248,7 @@ export default function Donate() {
                       placeholder="john@example.com"
                       value={donorEmail}
                       onChange={(e) => setDonorEmail(e.target.value)}
-                      className="w-full px-6 py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-medium outline-none"
+                      className="w-full px-5 md:px-6 py-3 md:py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-medium outline-none"
                     />
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default function Donate() {
                 {/* Select Amount */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-6">Select Amount</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
                     {[10, 25, 50, 100, 250].map(amount => (
                       <button
                         key={amount}
@@ -265,7 +265,7 @@ export default function Donate() {
                           setCustomAmount('');
                         }}
                         className={cn(
-                          "py-4 rounded-xl border-2 font-bold text-lg transition-all",
+                          "py-3 md:py-4 rounded-xl border-2 font-bold text-base md:text-lg transition-all",
                           (selectedAmount === amount && !customAmount)
                             ? "border-[#3b59ff] bg-[#f0f3ff] text-[#3b59ff]" 
                             : "bg-white border-gray-100 text-gray-600 hover:border-gray-200"
