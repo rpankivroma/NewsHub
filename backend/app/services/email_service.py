@@ -7,58 +7,66 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USER = os.getenv("SMTP_USER", "").strip('"').strip("'")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip('"').strip("'")
-SMTP_FROM = os.getenv("SMTP_FROM", "").strip('"').strip("'")
+# Aggressive stripping of quotes and whitespace
+def get_clean_env(key, default=""):
+    val = os.getenv(key, default)
+    if not val:
+        return default
+    # Remove both types of quotes and any leading/trailing whitespace
+    return val.strip().strip('"').strip("'").strip()
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:3000")
+SMTP_HOST = get_clean_env("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT_RAW = get_clean_env("SMTP_PORT", "587")
+SMTP_PORT = int(SMTP_PORT_RAW) if SMTP_PORT_RAW.isdigit() else 587
+SMTP_USER = get_clean_env("SMTP_USER")
+SMTP_PASSWORD = get_clean_env("SMTP_PASSWORD")
+SMTP_FROM = get_clean_env("SMTP_FROM")
+
+BASE_URL = get_clean_env("BASE_URL", "http://localhost:3000")
 
 def get_smtp_connection():
-    """Helper to create SMTP connection with explicit IPv4 resolution and fallback hosts."""
-    hosts_to_try = [SMTP_HOST]
-    if SMTP_HOST == "smtp.gmail.com":
-        hosts_to_try.append("smtp.googlemail.com")
+    """Helper to create SMTP connection with explicit IPv4 resolution and fallback."""
+    print(f"DEBUG: Connecting to {SMTP_HOST}:{SMTP_PORT} (User: {SMTP_USER})")
     
-    last_exception = None
-    
-    for host in hosts_to_try:
-        print(f"Attempting connection to {host}:{SMTP_PORT}...")
+    # Try different host variations for Gmail if the primary one fails
+    hosts = [SMTP_HOST]
+    if "gmail.com" in SMTP_HOST:
+        hosts.append("smtp.googlemail.com")
+
+    last_error = None
+    for host in hosts:
+        print(f"DEBUG: Attempting host: {host}")
         try:
-            # Try explicit IPv4 first to avoid IPv6-related Errno 101
-            addr_info = socket.getaddrinfo(host, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
-            for info in addr_info:
-                addr = info[4][0]
+            # Force IPv4 resolution to avoid IPv6 "Network unreachable" issues
+            try:
+                addr_info = socket.getaddrinfo(host, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
+                resolved_ips = [info[4][0] for info in addr_info]
+                print(f"DEBUG: Resolved {host} to IPv4 addresses: {resolved_ips}")
+            except Exception as res_err:
+                print(f"DEBUG: DNS Resolution failed for {host}: {res_err}")
+                resolved_ips = [host]
+
+            for ip in resolved_ips:
                 try:
-                    print(f"Trying {host} via IPv4 {addr}...")
+                    print(f"DEBUG: Connecting to {ip}...")
                     if SMTP_PORT == 465:
-                        return smtplib.SMTP_SSL(addr, SMTP_PORT, timeout=20)
+                        return smtplib.SMTP_SSL(ip, SMTP_PORT, timeout=15)
                     else:
-                        # For 587/STARTTLS, we connect then call starttls
-                        return smtplib.SMTP(addr, SMTP_PORT, timeout=20)
-                except Exception as e:
-                    print(f"Connection to {addr} failed: {e}")
-                    last_exception = e
+                        return smtplib.SMTP(ip, SMTP_PORT, timeout=15)
+                except Exception as conn_err:
+                    print(f"DEBUG: Connection to {ip} failed: {conn_err}")
+                    last_error = conn_err
                     continue
         except Exception as e:
-            print(f"Resolution failed for {host}: {e}")
-            last_exception = e
-            
-    # Final fallback attempt with original host (defaults to OS resolution)
-    try:
-        print(f"Final attempt with original host path: {SMTP_HOST}")
-        if SMTP_PORT == 465:
-            return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20)
-        else:
-            return smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20)
-    except Exception as e:
-        print(f"All SMTP connection attempts failed: {e}")
-        raise e
+            print(f"DEBUG: Strategy for {host} failed: {e}")
+            last_error = e
+            continue
+    
+    raise last_error if last_error else Exception("All SMTP connection attempts failed")
 
 def send_verification_email(to_email: str, code: str):
     if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
-        print("Warning: SMTP credentials not set. Code:", code)
+        print(f"Warning: SMTP credentials missing. User: {bool(SMTP_USER)}, From: {bool(SMTP_FROM)}")
         return False
     
     msg = MIMEMultipart('alternative')
