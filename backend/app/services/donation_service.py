@@ -20,7 +20,7 @@ class DonationService:
         return DonationRepository.create(db, donation)
 
     @staticmethod
-    def init_liqpay_payment(db: Session, amount: float, currency: str, email: str = None, name: str = None):
+    def init_liqpay_payment(db: Session, amount: float, currency: str, email: str = None, name: str = None, result_url: str = None):
         import uuid
         order_id = str(uuid.uuid4())
         
@@ -38,7 +38,7 @@ class DonationService:
         # Get LiqPay params
         from .liqpay_service import LiqPayService
         description = f"Donation for {amount} {currency}"
-        return LiqPayService.get_checkout_params(amount, currency, description, order_id)
+        return LiqPayService.get_checkout_params(amount, currency, description, order_id, result_url)
 
     @staticmethod
     def handle_liqpay_callback(db: Session, data: str, signature: str):
