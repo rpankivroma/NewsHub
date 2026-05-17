@@ -23,11 +23,12 @@ def init_payment(data: dict, db: Session = Depends(get_db)):
     currency = data.get("currency", "USD")
     email = data.get("email")
     name = data.get("name")
+    result_url = data.get("result_url")
     
     if not amount or amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount")
         
-    return DonationService.init_liqpay_payment(db, float(amount), currency, email, name)
+    return DonationService.init_liqpay_payment(db, float(amount), currency, email, name, result_url)
 
 from fastapi import Form
 @router.post("/liqpay/callback")
