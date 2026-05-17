@@ -22,49 +22,40 @@ SMTP_USER = get_clean_env("SMTP_USER")
 SMTP_PASSWORD = get_clean_env("SMTP_PASSWORD")
 SMTP_FROM = get_clean_env("SMTP_FROM")
 
-BASE_URL = get_clean_env("BASE_URL", "http://localhost:3000")
+BASE_URL = get_clean_env("BASE_URL", "https://news-hub-two-pi.vercel.app")
 
 def get_smtp_connection():
     """Helper to create SMTP connection with explicit IPv4 resolution and fallback."""
     print(f"DEBUG: Connecting to {SMTP_HOST}:{SMTP_PORT} (User: {SMTP_USER})")
     
-    # Try different host variations for Gmail/Brevo if the primary one fails
-    hosts = [SMTP_HOST]
-    if "gmail.com" in SMTP_HOST:
-        hosts.append("smtp.googlemail.com")
-    elif "brevo.com" in SMTP_HOST:
-        hosts.append("smtp-relay.sendinblue.com") # Old legacy host just in case
-
-    last_error = None
-    for host in hosts:
-        print(f"DEBUG: Attempting host: {host}")
-        try:
-            # Force IPv4 resolution to avoid IPv6 "Network unreachable" issues
+    # Try the recommended host first
+    try:
+        print(f"DEBUG: Attempting primary host connection: {SMTP_HOST}")
+        if SMTP_PORT == 465:
+            return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20)
+        else:
+            return smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20)
+    except OSError as e:
+        if e.errno == 101: # Network unreachable, often IPv6 issue
+            print(f"DEBUG: Primary connection failed with Errno 101. Attempting IPv4 fallback...")
             try:
-                addr_info = socket.getaddrinfo(host, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
-                resolved_ips = [info[4][0] for info in addr_info]
-                print(f"DEBUG: Resolved {host} to IPv4 addresses: {resolved_ips}")
-            except Exception as res_err:
-                print(f"DEBUG: DNS Resolution failed for {host}: {res_err}")
-                resolved_ips = [host]
-
-            for ip in resolved_ips:
-                try:
-                    print(f"DEBUG: Connecting to {ip}...")
-                    if SMTP_PORT == 465:
-                        return smtplib.SMTP_SSL(ip, SMTP_PORT, timeout=15)
-                    else:
-                        return smtplib.SMTP(ip, SMTP_PORT, timeout=15)
-                except Exception as conn_err:
-                    print(f"DEBUG: Connection to {ip} failed: {conn_err}")
-                    last_error = conn_err
-                    continue
-        except Exception as e:
-            print(f"DEBUG: Strategy for {host} failed: {e}")
-            last_error = e
-            continue
-    
-    raise last_error if last_error else Exception("All SMTP connection attempts failed")
+                addr_info = socket.getaddrinfo(SMTP_HOST, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
+                for info in addr_info:
+                    ip = info[4][0]
+                    try:
+                        print(f"DEBUG: Trying IPv4 fallback to {ip}...")
+                        if SMTP_PORT == 465:
+                            return smtplib.SMTP_SSL(ip, SMTP_PORT, timeout=20)
+                        else:
+                            return smtplib.SMTP(ip, SMTP_PORT, timeout=20)
+                    except Exception:
+                        continue
+            except Exception as res_e:
+                print(f"DEBUG: IPv4 fallback failed: {res_e}")
+        raise e
+    except Exception as e:
+        print(f"DEBUG: Connection failed: {e}")
+        raise e
 
 def send_verification_email(to_email: str, code: str):
     if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
@@ -102,8 +93,10 @@ def send_verification_email(to_email: str, code: str):
     
     try:
         server = get_smtp_connection()
+        server.ehlo()
         if SMTP_PORT != 465:
             server.starttls(server_hostname=SMTP_HOST)
+            server.ehlo()
         
         server.login(SMTP_USER, SMTP_PASSWORD)
         text = msg.as_string()
@@ -158,8 +151,10 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
     
     try:
         server = get_smtp_connection()
+        server.ehlo()
         if SMTP_PORT != 465:
             server.starttls(server_hostname=SMTP_HOST)
+            server.ehlo()
         
         server.login(SMTP_USER, SMTP_PASSWORD)
         text = msg.as_string()
