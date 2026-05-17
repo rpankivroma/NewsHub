@@ -71,7 +71,7 @@ class SubmissionService:
                 author_id = submitter.id if submitter else current_admin.id
                 author_name = submitter.full_name if submitter else (updated_submission.full_name or current_admin.full_name)
 
-                ArticleRepository.create(db, article_data, author_id, author_name)
+                ArticleRepository.create(db, article_data, author_id)
                 AdminRepository.create_log(db, current_admin.id, "Approved Submission", f"Approved and published submission from {author_name}: {updated_submission.title}")
             elif data["status"] == "rejected" and updated_submission:
                 AdminRepository.create_log(db, current_admin.id, "Rejected Submission", f"Rejected submission from {updated_submission.full_name or 'Unknown'}: {updated_submission.title}")
