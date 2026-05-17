@@ -36,7 +36,7 @@ class LiqPayService:
         return json.loads(json_data)
 
     @classmethod
-    def get_checkout_params(cls, amount: float, currency: str, description: str, order_id: str) -> Dict[str, str]:
+    def get_checkout_params(cls, amount: float, currency: str, description: str, order_id: str, passed_result_url: str = None) -> Dict[str, str]:
         credentials = cls.get_credentials()
         public_key = credentials["public_key"]
         private_key = credentials["private_key"]
@@ -44,7 +44,7 @@ class LiqPayService:
         if not public_key or public_key == "your_public_key" or not private_key or private_key == "your_private_key":
             print("WARNING: LiqPay keys are not configured correctly. Using placeholders.")
             
-        result_url = os.getenv("LIQPAY_RESULT_URL", "")
+        result_url = passed_result_url or os.getenv("LIQPAY_RESULT_URL", "")
         # Append amount to result_url if possible
         if result_url and "?" in result_url:
             result_url += f"&amount={amount}"
