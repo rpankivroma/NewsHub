@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from .db.database import engine
 from . import models
 from .api import auth, articles, categories, users, admin, about, donations, submissions, comments, analytics
+from .services.email_service import check_smtp_status
 from sqlalchemy.orm import Session
 from .db.database import SessionLocal
 import datetime
@@ -193,3 +194,10 @@ def health_check():
 @app.on_event("startup")
 async def startup_event():
     seed_data()
+    
+    # Check SMTP status
+    success, message = check_smtp_status()
+    if success:
+        print(f"📧 SMTP STATUS: {message}")
+    else:
+        print(f"❌ SMTP STATUS FAILED: {message}")

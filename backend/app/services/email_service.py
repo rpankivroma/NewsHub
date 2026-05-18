@@ -164,3 +164,50 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
     except Exception as e:
         print(f"Error sending newsletter alert (Target: {to_email}): {e}")
         return False
+
+def check_smtp_status():
+    """Diagnostic function to check SMTP connection and credentials."""
+    print(f"🔍 Diagnosing SMTP Connection to {SMTP_HOST}:{SMTP_PORT}...")
+    
+    if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
+        missing = []
+        if not SMTP_USER: missing.append("SMTP_USER")
+        if not SMTP_PASSWORD: missing.append("SMTP_PASSWORD")
+        if not SMTP_FROM: missing.append("SMTP_FROM")
+        return False, f"Missing required environment variables: {', '.join(missing)}"
+    
+    try:
+        # 1. Attempt Connection
+        try:
+            server = get_smtp_connection()
+        except OSError as e:
+            if e.errno == 101:
+                return False, f"Network Unreachable (Errno 101). The server cannot reach {SMTP_HOST}. Check firewall or IPv6/IPv4 settings."
+            return False, f"Socket error: {str(e)}"
+        except Exception as e:
+            return False, f"Connection failed: {str(e)}"
+            
+        # 2. EHLO and STARTTLS
+        try:
+            server.ehlo()
+            if SMTP_PORT != 465:
+                server.starttls(server_hostname=SMTP_HOST)
+                server.ehlo()
+        except Exception as e:
+            server.quit()
+            return False, f"Encryption handshake (STARTTLS) failed: {str(e)}"
+            
+        # 3. Login
+        try:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+        except smtplib.SMTPAuthenticationError:
+            server.quit()
+            return False, "Authentication failed. Check your SMTP_USER and SMTP_PASSWORD (App Key)."
+        except Exception as e:
+            server.quit()
+            return False, f"Login failed: {str(e)}"
+            
+        server.quit()
+        return True, "SMTP connection and authentication successful."
+    except Exception as e:
+        return False, f"Unexpected error during SMTP check: {str(e)}"
