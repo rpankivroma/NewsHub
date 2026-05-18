@@ -1,8 +1,6 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
-import socket
+import requests
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,61 +10,50 @@ def get_clean_env(key, default=""):
     val = os.getenv(key, default)
     if not val:
         return default
-    # Remove both types of quotes and any leading/trailing whitespace
     return val.strip().strip('"').strip("'").strip()
 
-SMTP_HOST = get_clean_env("SMTP_HOST", "smtp-relay.brevo.com")
-SMTP_PORT_RAW = get_clean_env("SMTP_PORT", "587")
-SMTP_PORT = int(SMTP_PORT_RAW) if SMTP_PORT_RAW.isdigit() else 587
-SMTP_USER = get_clean_env("SMTP_USER")
-SMTP_PASSWORD = get_clean_env("SMTP_PASSWORD")
-SMTP_FROM = get_clean_env("SMTP_FROM")
+BREVO_API_KEY = get_clean_env("BREVO_API_KEY")
+# Fallback for older config if BREVO_API_KEY is not set
+if not BREVO_API_KEY:
+    BREVO_API_KEY = get_clean_env("SMTP_PASSWORD")
 
+SMTP_FROM = get_clean_env("SMTP_FROM")
 BASE_URL = get_clean_env("BASE_URL", "https://news-hub-two-pi.vercel.app")
 
-def get_smtp_connection():
-    """Helper to create SMTP connection with explicit IPv4 resolution and fallback."""
-    print(f"DEBUG: Connecting to {SMTP_HOST}:{SMTP_PORT} (User: {SMTP_USER})")
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
+def send_brevo_email(to_email: str, subject: str, html_content: str):
+    """Generic helper to send email via Brevo API."""
+    if not BREVO_API_KEY or not SMTP_FROM:
+        print(f"Error: Brevo API credentials missing. API Key: {bool(BREVO_API_KEY)}, From: {SMTP_FROM}")
+        return False
+
+    payload = {
+        "sender": {"email": SMTP_FROM, "name": "NewsHub"},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_content
+    }
     
-    # Try the recommended host first
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+    
     try:
-        print(f"DEBUG: Attempting primary host connection: {SMTP_HOST}")
-        if SMTP_PORT == 465:
-            return smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20)
+        response = requests.post(BREVO_API_URL, json=payload, headers=headers, timeout=10)
+        if response.status_code in [200, 201, 202]:
+            return True
         else:
-            return smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20)
-    except OSError as e:
-        if e.errno == 101: # Network unreachable, often IPv6 issue
-            print(f"DEBUG: Primary connection failed with Errno 101. Attempting IPv4 fallback...")
-            try:
-                addr_info = socket.getaddrinfo(SMTP_HOST, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
-                for info in addr_info:
-                    ip = info[4][0]
-                    try:
-                        print(f"DEBUG: Trying IPv4 fallback to {ip}...")
-                        if SMTP_PORT == 465:
-                            return smtplib.SMTP_SSL(ip, SMTP_PORT, timeout=20)
-                        else:
-                            return smtplib.SMTP(ip, SMTP_PORT, timeout=20)
-                    except Exception:
-                        continue
-            except Exception as res_e:
-                print(f"DEBUG: IPv4 fallback failed: {res_e}")
-        raise e
+            print(f"Brevo API Error ({response.status_code}): {response.text}")
+            return False
     except Exception as e:
-        print(f"DEBUG: Connection failed: {e}")
-        raise e
+        print(f"Exception sending Brevo email: {e}")
+        return False
 
 def send_verification_email(to_email: str, code: str):
-    if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
-        print(f"Warning: SMTP credentials missing. User: {bool(SMTP_USER)}, From: {bool(SMTP_FROM)}")
-        return False
-    
-    msg = MIMEMultipart('alternative')
-    msg['From'] = SMTP_FROM
-    msg['To'] = to_email
-    msg['Subject'] = "Verify your NewsHub account"
-    
+    subject = "Verify your NewsHub account"
     html_body = f"""
     <html>
       <body style="font-family: sans-serif; color: #1a202c; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -88,37 +75,11 @@ def send_verification_email(to_email: str, code: str):
       </body>
     </html>
     """
-    
-    msg.attach(MIMEText(html_body, 'html'))
-    
-    try:
-        server = get_smtp_connection()
-        server.ehlo()
-        if SMTP_PORT != 465:
-            server.starttls(server_hostname=SMTP_HOST)
-            server.ehlo()
-        
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        text = msg.as_string()
-        server.sendmail(SMTP_FROM, to_email, text)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Error sending email (Target: {to_email}): {e}")
-        return False
+    return send_brevo_email(to_email, subject, html_body)
 
 def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
-    if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
-        print(f"Warning: SMTP credentials not set. Newsletter alert to {to_email} for: {article_title}")
-        return False
-    
-    msg = MIMEMultipart('alternative')
-    msg['From'] = SMTP_FROM
-    msg['To'] = to_email
-    msg['Subject'] = f"Recommended for you: {article_title}"
-    
+    subject = f"Recommended for you: {article_title}"
     article_url = f"{BASE_URL}?articleId={article_id}"
-    
     html_body = f"""
     <html>
       <body style="font-family: sans-serif; color: #1a202c; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -146,68 +107,30 @@ def send_newsletter_alert(to_email: str, article_title: str, article_id: int):
       </body>
     </html>
     """
-    
-    msg.attach(MIMEText(html_body, 'html'))
-    
-    try:
-        server = get_smtp_connection()
-        server.ehlo()
-        if SMTP_PORT != 465:
-            server.starttls(server_hostname=SMTP_HOST)
-            server.ehlo()
-        
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        text = msg.as_string()
-        server.sendmail(SMTP_FROM, to_email, text)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Error sending newsletter alert (Target: {to_email}): {e}")
-        return False
+    return send_brevo_email(to_email, subject, html_body)
 
 def check_smtp_status():
-    """Diagnostic function to check SMTP connection and credentials."""
-    print(f"🔍 Diagnosing SMTP Connection to {SMTP_HOST}:{SMTP_PORT}...")
+    """Diagnostic function to check Brevo API status (kept same name for main.py compatibility)."""
+    print(f"🔍 Diagnosing Brevo API Connection...")
     
-    if not all([SMTP_USER, SMTP_PASSWORD, SMTP_FROM]):
-        missing = []
-        if not SMTP_USER: missing.append("SMTP_USER")
-        if not SMTP_PASSWORD: missing.append("SMTP_PASSWORD")
-        if not SMTP_FROM: missing.append("SMTP_FROM")
-        return False, f"Missing required environment variables: {', '.join(missing)}"
+    if not BREVO_API_KEY:
+        return False, "Missing BREVO_API_KEY environment variable."
+    
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY
+    }
     
     try:
-        # 1. Attempt Connection
-        try:
-            server = get_smtp_connection()
-        except OSError as e:
-            if e.errno == 101:
-                return False, f"Network Unreachable (Errno 101). The server cannot reach {SMTP_HOST}. Check firewall or IPv6/IPv4 settings."
-            return False, f"Socket error: {str(e)}"
-        except Exception as e:
-            return False, f"Connection failed: {str(e)}"
-            
-        # 2. EHLO and STARTTLS
-        try:
-            server.ehlo()
-            if SMTP_PORT != 465:
-                server.starttls(server_hostname=SMTP_HOST)
-                server.ehlo()
-        except Exception as e:
-            server.quit()
-            return False, f"Encryption handshake (STARTTLS) failed: {str(e)}"
-            
-        # 3. Login
-        try:
-            server.login(SMTP_USER, SMTP_PASSWORD)
-        except smtplib.SMTPAuthenticationError:
-            server.quit()
-            return False, "Authentication failed. Check your SMTP_USER and SMTP_PASSWORD (App Key)."
-        except Exception as e:
-            server.quit()
-            return False, f"Login failed: {str(e)}"
-            
-        server.quit()
-        return True, "SMTP connection and authentication successful."
+        # Check account info to verify API Key
+        response = requests.get("https://api.brevo.com/v3/account", headers=headers, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            email = data.get("email", "unknown")
+            return True, f"Brevo API Connection successful. Account: {email}"
+        elif response.status_code == 401:
+            return False, "Unauthorized: Invalid Brevo API Key."
+        else:
+            return False, f"Brevo API error: {response.status_code} - {response.text}"
     except Exception as e:
-        return False, f"Unexpected error during SMTP check: {str(e)}"
+        return False, f"Unexpected error during Brevo check: {str(e)}"
