@@ -19,6 +19,7 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -88,15 +89,27 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         onPageChange={(page) => {
+            if (page === 'home') setSelectedCategory('All');
             setCurrentPage(page);
             window.scrollTo(0, 0);
+        }}
+        onCategorySelect={(categoryName) => {
+          setSelectedCategory(categoryName);
+          setCurrentPage('home');
+          window.scrollTo(0, 0);
         }}
         currentPage={currentPage}
         categories={categories}
       />
 
       <main className="pb-24">
-        {currentPage === 'home' && <Home onArticleClick={handleArticleClick} />}
+        {currentPage === 'home' && (
+          <Home 
+            onArticleClick={handleArticleClick} 
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+          />
+        )}
         {currentPage === 'article' && selectedArticleId && (
           <ArticleDetail 
             articleId={selectedArticleId} 

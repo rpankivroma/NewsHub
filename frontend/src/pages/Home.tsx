@@ -10,15 +10,16 @@ import { cn } from '../lib/utils';
 
 interface HomeProps {
   onArticleClick: (id: number) => void;
+  selectedCategory?: string;
+  onCategoryChange?: (category: string) => void;
 }
 
 const PAGE_SIZE = 12;
 
-export default function Home({ onArticleClick }: HomeProps) {
+export default function Home({ onArticleClick, selectedCategory = 'All', onCategoryChange }: HomeProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTopic, setSelectedTopic] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -32,8 +33,8 @@ export default function Home({ onArticleClick }: HomeProps) {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const categoryId = selectedTopic !== 'All' 
-          ? categories.find(c => c.name === selectedTopic)?.id 
+        const categoryId = selectedCategory !== 'All' 
+          ? categories.find(c => c.name === selectedCategory)?.id 
           : undefined;
         
         const articlesData = await newsService.getArticles(page * PAGE_SIZE, PAGE_SIZE + 1, search, categoryId);
@@ -52,10 +53,10 @@ export default function Home({ onArticleClick }: HomeProps) {
       }
     };
     fetchData();
-  }, [page, search, selectedTopic, categories]);
+  }, [page, search, selectedCategory, categories]);
 
   const handleTopicChange = (topic: string) => {
-    setSelectedTopic(topic);
+    onCategoryChange?.(topic);
     setPage(0);
   };
 
@@ -80,7 +81,7 @@ export default function Home({ onArticleClick }: HomeProps) {
               onClick={() => handleTopicChange('All')}
               className={cn(
                 "px-5 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm whitespace-nowrap",
-                selectedTopic === 'All' 
+                selectedCategory === 'All' 
                   ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
                   : "bg-white border-gray-100 text-gray-600 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50"
               )}
@@ -93,7 +94,7 @@ export default function Home({ onArticleClick }: HomeProps) {
                 onClick={() => handleTopicChange(category.name)}
                 className={cn(
                   "px-5 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm whitespace-nowrap",
-                  selectedTopic === category.name 
+                  selectedCategory === category.name 
                     ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" 
                     : "bg-white border-gray-100 text-gray-600 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50"
                 )}

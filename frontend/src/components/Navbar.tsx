@@ -8,11 +8,12 @@ interface NavbarProps {
   user?: any;
   onLogout: () => void;
   onPageChange: (page: string) => void;
+  onCategorySelect?: (categoryName: string) => void;
   currentPage: string;
   categories: any[];
 }
 
-export default function Navbar({ onLoginClick, user, onLogout, onPageChange, currentPage, categories }: NavbarProps) {
+export default function Navbar({ onLoginClick, user, onLogout, onPageChange, onCategorySelect, currentPage, categories }: NavbarProps) {
   const [isTopicsOpen, setIsTopicsOpen] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -67,7 +68,7 @@ export default function Navbar({ onLoginClick, user, onLogout, onPageChange, cur
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
                     onClick={() => {
                         setIsTopicsOpen(false);
-                        onPageChange('home');
+                        onCategorySelect?.(category.name);
                     }}
                   >
                     {category.name}
@@ -202,7 +203,7 @@ export default function Navbar({ onLoginClick, user, onLogout, onPageChange, cur
                         className="w-full text-left px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded-xl transition-all"
                         onClick={() => {
                             setIsMobileMenuOpen(false);
-                            onPageChange('home');
+                            onCategorySelect?.(category.name);
                         }}
                       >
                         {category.name}
