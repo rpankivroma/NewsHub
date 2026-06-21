@@ -39,11 +39,6 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Hide on admin pages
-  if (currentPage === 'admin' || window.location.pathname.startsWith('/administration')) {
-    return null;
-  }
-
   // Polling for Support Online status
   useEffect(() => {
     const fetchSupportStatus = async () => {
@@ -248,6 +243,11 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
       });
     }
   };
+
+  // Hide on admin pages
+  if (currentPage === 'admin' || window.location.pathname.startsWith('/administration')) {
+    return null;
+  }
 
   return (
     <>
