@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: newshub-support-service
+    runtime: docker
+    dockerfilePath: ./Dockerfile.prod
+    envVars:
+      - key: DATABASE_URL
+        scope: run
+        sync: false
+      - key: MAIN_DATABASE_URL
+        scope: run
+        sync: false
+      - key: JWT_SECRET
+        scope: run
+        sync: false
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        scope: run
+        sync: false
+      - key: BREVO_API_KEY
+        scope: run
+        sync: false
+      - key: FRONTEND_URL
+        scope: run
+        sync: false
+      - key: PORT
+        value: "8000"
+
+  - type: background-worker
+    name: newshub-kafka-zookeeper
+    runtime: docker
+    dockerfile:
+      path: Dockerfile.kafka
+    envVars:
+      - key: KAFKA_BROKER_ID
+        value: "1"
+      - key: KAFKA_ZOOKEEPER_CONNECT
+        value: kafka-zookeeper:2181
+      - key: KAFKA_ADVERTISED_LISTENERS
+        value: PLAINTEXT://kafka-zookeeper:9092

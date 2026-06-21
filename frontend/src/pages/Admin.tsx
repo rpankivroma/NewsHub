@@ -26,6 +26,7 @@ import { DonationManager } from '../components/Admin/DonationManager';
 import { AboutPageManager } from '../components/Admin/AboutPageManager';
 import { Journal } from '../components/Admin/Journal';
 import { AdminManager } from '../components/Admin/AdminManager';
+import { SupportManager } from '../components/Admin/SupportManager';
 
 interface AdminProps {
   user: User | null;
@@ -80,8 +81,9 @@ interface Stats {
   };
 }
 
-export default function Admin({ user }: AdminProps) {
+export const Admin: React.FC<AdminProps> = ({ user }) => {
   const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [supportBadgeCount, setSupportBadgeCount] = React.useState(0);
   const [stats, setStats] = React.useState<Stats | null>(null);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [donations, setDonations] = React.useState<any[]>([]);
@@ -315,6 +317,7 @@ export default function Admin({ user }: AdminProps) {
     { id: 'dashboard', label: 'Statistics', icon: BarChart2 },
     { id: 'articles', label: 'Articles', icon: Newspaper },
     { id: 'submissions', label: `Submissions ${stats?.system.pendingArticles ? `(${stats.system.pendingArticles})` : ''}`, icon: UserIcon },
+    { id: 'support', label: `Support ${supportBadgeCount ? `(${supportBadgeCount})` : ''}`, icon: MessageSquare },
     { id: 'categories', label: 'Categories', icon: LayoutDashboard },
     { id: 'journal', label: 'Journal', icon: Activity },
     { id: 'users', label: 'Users', icon: Shield },
@@ -551,9 +554,18 @@ export default function Admin({ user }: AdminProps) {
         />
       )}
 
+      {activeTab === 'support' && (
+        <SupportManager 
+          user={user} 
+          onBadgeUpdate={setSupportBadgeCount} 
+        />
+      )}
+
       {activeTab === 'admins' && <AdminManager user={user} />}
 
       {activeTab === 'journal' && <Journal />}
     </div>
   );
-}
+};
+
+export default Admin;

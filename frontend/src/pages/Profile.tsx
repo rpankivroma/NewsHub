@@ -16,7 +16,7 @@ interface ProfileProps {
   onArticleClick: (id: number) => void;
 }
 
-export default function Profile({ user, onUserUpdate, onArticleClick }: ProfileProps) {
+export const Profile: React.FC<ProfileProps> = ({ user, onUserUpdate, onArticleClick }) => {
   const [activeTab, setActiveTab] = useState('about');
   const [isEditing, setIsEditing] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -132,4 +132,6 @@ export default function Profile({ user, onUserUpdate, onArticleClick }: ProfileP
       />
     </div>
   );
-}
+};
+
+export default Profile;

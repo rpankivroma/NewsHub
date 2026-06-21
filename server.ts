@@ -15,6 +15,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   const BACKEND_PORT = 8000;
+  const SUPPORT_PORT = 8085;
 
   app.use(cors());
 
@@ -34,6 +35,36 @@ async function startServer() {
   pythonProcess.on("error", (err) => {
     console.error("❌ Failed to start FastAPI backend:", err);
   });
+
+  // Spawn Support Service backend
+  console.log("🚀 Starting Support Service backend on port " + SUPPORT_PORT + "...");
+  const supportProcess = spawn(pythonCommand, [
+    "-m", "uvicorn",
+    "app.main:app",
+    "--host", "0.0.0.0",
+    "--port", SUPPORT_PORT.toString()
+  ], {
+    cwd: path.join(__dirname, "support-service"),
+    stdio: "inherit",
+    env: process.env
+  });
+
+  supportProcess.on("error", (err) => {
+    console.error("❌ Failed to start Support Service backend:", err);
+  });
+
+  // Proxy support requests to Support Service
+  const supportProxy = createProxyMiddleware({
+    target: `http://127.0.0.1:${SUPPORT_PORT}`,
+    changeOrigin: true,
+    onError: (err, req, res) => {
+      console.error("Support Proxy Error:", err);
+      (res as any).status(502).json({ detail: "Support backend is not responding" });
+    }
+  });
+
+  app.use("/support", supportProxy);
+  app.use("/admin/support", supportProxy);
 
   // Proxy API requests to FastAPI
   app.use("/api", createProxyMiddleware({
@@ -92,6 +123,22 @@ async function startServer() {
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`✨ Server running on http://localhost:${PORT}`);
     console.log(`🔗 Proxying /api to http://localhost:${BACKEND_PORT}`);
+  });
+
+  // Handle support service Websocket upgrades
+  const wsProxy = createProxyMiddleware({
+    target: `ws://127.0.0.1:${SUPPORT_PORT}`,
+    changeOrigin: true,
+    ws: true,
+    onError: (err, req, res) => {
+      console.error("WS Proxy Upgrade Error:", err);
+    }
+  });
+
+  server.on("upgrade", (req, socket, head) => {
+    if (req.url && req.url.startsWith("/ws")) {
+      wsProxy.upgrade(req as any, socket as any, head as any);
+    }
   });
 
   server.on("error", (err: any) => {
