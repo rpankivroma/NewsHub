@@ -1,117 +1,122 @@
+import os
 import json
 import logging
 import asyncio
-from typing import Optional
-from aiokafka import AIOKafkaProducer
+from aiokafka import AIOKafkaConsumer
 from ..config import settings
+from .ssl_helper import get_kafka_ssl_context
 
-logger = logging.getLogger("kafka_producer")
+logger = logging.getLogger("kafka_consumer")
 
-class KafkaProducerManager:
+class KafkaConsumerManager:
     def __init__(self):
-        self.producer = None
-        self._lock = asyncio.Lock()
+        self.consumer = None
+        self._running = False
+        self._task = None
+        self._temp_files = []
 
     async def start(self):
-        async with self._lock:
-            if self.producer is not None:
-                return
-            bootstrap_servers = settings.KAFKA_BOOTSTRAP_SERVERS or "localhost:9092"
-            logger.info(f"Initializing Kafka Producer with bootstrap servers: {bootstrap_servers}")
+        if self._running:
+            return
+        self._running = True
+        self._task = asyncio.create_task(self._consume_loop())
+        logger.info("Kafka Consumer background task initiated.")
+
+    def _cleanup_temp_files(self):
+        for path in self._temp_files:
             try:
-                self.producer = AIOKafkaProducer(
-                    bootstrap_servers=bootstrap_servers,
-                    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-                )
-                await self.producer.start()
-                logger.info("Kafka Producer started successfully.")
-            except Exception as e:
-                logger.error(f"Failed to start Kafka Producer: {e}")
-                self.producer = None
+                if os.path.exists(path):
+                    os.remove(path)
+                    logger.info(f"Cleaned up temporary cert file: {path}")
+            except Exception as ex:
+                logger.warning(f"Failed to clean up temporary cert file {path}: {ex}")
+        self._temp_files = []
 
     async def stop(self):
-        async with self._lock:
-            if self.producer:
-                try:
-                    await self.producer.stop()
-                    logger.info("Kafka Producer stopped.")
-                except Exception as e:
-                    logger.error(f"Error stopping Kafka Producer: {e}")
-                finally:
-                    self.producer = None
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+            self._task = None
+        if self.consumer:
+            try:
+                await self.consumer.stop()
+            except Exception as e:
+                logger.error(f"Error while stopping AIOKafkaConsumer: {e}")
+            finally:
+                self.consumer = None
+        self._cleanup_temp_files()
+        logger.info("Kafka Consumer stopped.")
 
-    async def publish(self, topic: str, data: dict):
-        if self.producer is None:
-            await self.start()
-        if self.producer is None:
-            logger.warning(f"Kafka Producer is not active. Event to {topic} omitted: {data}")
-            return
-        try:
-            await self.producer.send_and_wait(topic, data)
-            logger.info(f"Published event to '{topic}' successfully: {data}")
-        except Exception as e:
-            logger.error(f"Failed to publish event to '{topic}': {e}")
+    async def _consume_loop(self):
+        bootstrap_servers = settings.KAFKA_BOOTSTRAP_SERVERS or "localhost:9092"
+        topics = ["support.message.sent", "support.message.read"]
+        
+        logger.info(f"Starting consumer loop. Listening on {topics} from bootstrap {bootstrap_servers}")
+        
+        while self._running:
+            try:
+                ssl_context, temp_files = get_kafka_ssl_context()
+                self._temp_files = temp_files
+                
+                kwargs = {
+                    "bootstrap_servers": bootstrap_servers,
+                    "group_id": "support-group",
+                    "value_deserializer": lambda x: json.loads(x.decode('utf-8')),
+                    "auto_offset_reset": "earliest"
+                }
 
-producer_manager = KafkaProducerManager()
+                if ssl_context:
+                    kwargs["security_protocol"] = "SSL"
+                    kwargs["ssl_context"] = ssl_context
+                    logger.info("Kafka Consumer SSL context applied.")
 
-async def publish_event(topic: str, data: dict):
-    """
-    Generic event publisher.
-    """
-    await producer_manager.publish(topic, data)
+                self.consumer = AIOKafkaConsumer(
+                    *topics,
+                    **kwargs
+                )
+                await self.consumer.start()
+                logger.info(f"Kafka Consumer connected successfully to {bootstrap_servers}")
+                
+                async for message in self.consumer:
+                    if not self._running:
+                        break
+                    topic = message.topic
+                    payload = message.value
+                    logger.info(f"Received message on topic '{topic}': {payload}")
+                    
+                    if topic == "support.message.sent":
+                        await self.handle_message_sent(payload)
+                    elif topic == "support.message.read":
+                        await self.handle_message_read(payload)
+                        
+            except asyncio.CancelledError:
+                self._cleanup_temp_files()
+                break
+            except Exception as e:
+                logger.error(f"Kafka Consumer connection error: {e}. Re-attempting connection in 10 seconds...")
+                if self.consumer:
+                    try:
+                        await self.consumer.stop()
+                    except Exception:
+                        pass
+                    self.consumer = None
+                self._cleanup_temp_files()
+                await asyncio.sleep(10)
 
-async def publish_chat_created(
-    chat_id: int, 
-    user_id: Optional[int], 
-    guest_email: Optional[str], 
-    guest_name: Optional[str], 
-    status: str, 
-    created_at: Optional[str]
-):
-    """
-    Publish support.chat.created event.
-    """
-    await publish_event("support.chat.created", {
-        "chat_id": chat_id,
-        "user_id": user_id,
-        "guest_email": guest_email,
-        "guest_name": guest_name,
-        "status": status,
-        "created_at": created_at
-    })
+    async def handle_message_sent(self, payload: dict):
+        """
+        Placeholder logic when support.message.sent event is caught.
+        """
+        logger.info(f"Processed event support.message.sent: {payload}")
 
-async def publish_chat_status_changed(
-    chat_id: int, 
-    old_status: str, 
-    new_status: str, 
-    updated_at: Optional[str]
-):
-    """
-    Publish support.chat.status.changed event.
-    """
-    await publish_event("support.chat.status.changed", {
-        "chat_id": chat_id,
-        "old_status": old_status,
-        "new_status": new_status,
-        "updated_at": updated_at
-    })
+    async def handle_message_read(self, payload: dict):
+        """
+        Placeholder logic when support.message.read event is caught.
+        """
+        logger.info(f"Processed event support.message.read: {payload}")
 
-async def publish_message_sent(
-    message_id: int, 
-    chat_id: int, 
-    sender_type: str, 
-    sender_id: Optional[int], 
-    content: str, 
-    created_at: Optional[str]
-):
-    """
-    Publish support.message.sent event.
-    """
-    await publish_event("support.message.sent", {
-        "message_id": message_id,
-        "chat_id": chat_id,
-        "sender_type": sender_type,
-        "sender_id": sender_id,
-        "content": content,
-        "created_at": created_at
-    })
+consumer_manager = KafkaConsumerManager()

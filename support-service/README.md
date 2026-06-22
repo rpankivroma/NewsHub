@@ -122,3 +122,4 @@ pytest -v
 # Run with test coverage reports
 pytest --cov=app tests/
 ```
+python3 -m pip install kafka-python
