@@ -6,11 +6,22 @@ from .routers.support import router as support_router, admin_router as support_a
 from .kafka.consumer import consumer_manager
 from .kafka.producer import producer_manager
 
+import asyncio
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start Kafka Producer and Consumer background tasks
     await producer_manager.start()
     await consumer_manager.start()
+    
+    # Check Brevo Connection Status asynchronously on startup
+    try:
+        from .services.email_service import verify_brevo_connection
+        asyncio.create_task(verify_brevo_connection())
+    except Exception as e:
+        logger = logging.getLogger("main")
+        logger.error(f"Failed to initiate Brevo connection check: {e}")
+
     yield
     # Clean up Kafka tasks
     await consumer_manager.stop()

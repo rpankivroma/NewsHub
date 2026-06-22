@@ -9,6 +9,40 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger("email_service")
 
+async def verify_brevo_connection() -> bool:
+    """
+    Verifies the connection to the Brevo API using account endpoint.
+    Logs success or failure to the terminal logs.
+    """
+    api_key = settings.BREVO_API_KEY
+    if not api_key:
+        logger.error("BREVO_API_KEY is not configured in settings. Brevo connection: FAILED")
+        print("BREVO CONNECTION: FAILED - BREVO_API_KEY is not configured in settings.", flush=True)
+        return False
+        
+    url = "https://api.brevo.com/v3/account"
+    headers = {
+        "api-key": api_key,
+        "accept": "application/json"
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=5.0)
+            if response.status_code == 200:
+                logger.info("BREVO CONNECTION: SUCCESS - Brevo API credentials and connection verified successfully.")
+                print("BREVO CONNECTION: SUCCESS - Brevo API credentials and connection verified successfully.", flush=True)
+                return True
+            else:
+                logger.error(f"BREVO CONNECTION: FAILED - Status: {response.status_code}, Response: {response.text}")
+                print(f"BREVO CONNECTION: FAILED - Status: {response.status_code}, Response: {response.text}", flush=True)
+                return False
+    except Exception as e:
+        logger.error(f"BREVO CONNECTION: ERROR - Failed to connect to Brevo API: {e}")
+        print(f"BREVO CONNECTION: ERROR - Failed to connect to Brevo API: {e}", flush=True)
+        return False
+
+
 async def send_email(recipient_email: str, subject: str, html_content: str) -> bool:
     """
     Sends an email using the Brevo (formerly Sendinblue) v3 API.
