@@ -1,9 +1,10 @@
-version: '3.9'
-
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: newshub-support-service
+    image: newshub-support-service:latest
     ports:
       - "8000:8000"
     env_file:
@@ -13,6 +14,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      zookeeper:
+        condition: service_healthy
     networks:
       - newshub
     restart: unless-stopped
@@ -21,11 +24,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: newshub-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -33,6 +45,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -40,26 +53,42 @@ services:
       test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server=localhost:9092"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
     networks:
       - newshub
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: newshub-zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: WARN
     healthcheck:
-      test: ["CMD", "echo", "stat", "|", "nc", "localhost", "2181"]
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
     networks:
       - newshub
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
 
 networks:
   newshub:
