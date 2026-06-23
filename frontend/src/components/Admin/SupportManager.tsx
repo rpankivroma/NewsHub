@@ -5,6 +5,7 @@ import {
   Trash2, Archive, Loader2, Volume2, VolumeX, Mail, Network, UserCheck, HelpCircle
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { supportUrl, supportWsUrl } from '../../services/supportService';
 
 interface AdminSupportProps {
   user: any;
@@ -68,7 +69,7 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
   // 1. Fetch Stats
   const fetchStats = async () => {
     try {
-      const res = await fetch('/admin/support/statistics');
+      const res = await fetch(supportUrl('/admin/support/statistics'));
       if (res.ok) {
         const data = await res.json();
         setActiveChatsCount(data.active_chats || 0);
@@ -98,7 +99,7 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
       if (registrationFilter !== 'All') params.append('registered', registrationFilter === 'registered' ? 'true' : 'false');
       if (onlineFilter !== 'All') params.append('online', onlineFilter === 'online' ? 'true' : 'false');
 
-      const res = await fetch(`/admin/support/chats?${params.toString()}`);
+      const res = await fetch(supportUrl(`/admin/support/chats?${params.toString()}`));
       if (res.ok) {
         const data = await res.json();
         setChats(data.chats || []);
@@ -131,13 +132,13 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
   const loadChatHistory = async (chatId: number) => {
     setIsLoadingMessages(true);
     try {
-      const res = await fetch(`/support/chat/${chatId}/messages`);
+      const res = await fetch(supportUrl(`/support/chat/${chatId}/messages`));
       if (res.ok) {
         const history = await res.json();
         setMessages(history);
 
         // Mark chat as read
-        await fetch(`/support/chat/${chatId}/read?sender_type=agent`, { method: 'PATCH' });
+        await fetch(supportUrl(`/support/chat/${chatId}/read?sender_type=agent`), { method: 'PATCH' });
         
         // Refresh items to clear unread counts on list
         setChats(prev => prev.map(c => c.id === chatId ? { ...c, unread_count: 0 } : c));
@@ -157,8 +158,7 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
         wsRef.current.close();
       }
 
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const wsUrl = `${wsProtocol}://${window.location.host}/ws/admin/support`;
+      const wsUrl = supportWsUrl('/ws/admin/support');
       const ws = new WebSocket(wsUrl);
 
       ws.onmessage = async (event) => {
@@ -176,7 +176,7 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
               
               // Mark admin-received visitor messages read instantly
               if (newMsg.sender_type !== 'agent') {
-                await fetch(`/support/chat/${selectedChat.id}/read?sender_type=agent`, { method: 'PATCH' });
+                await fetch(supportUrl(`/support/chat/${selectedChat.id}/read?sender_type=agent`), { method: 'PATCH' });
               }
             }
 
@@ -256,7 +256,7 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
   const handleMarkChatInactive = async (chatId: number) => {
     if (!window.confirm('Do you want to mark this support session as inactive?')) return;
     try {
-      const res = await fetch(`/admin/support/chat/${chatId}/inactive`, {
+      const res = await fetch(supportUrl(`/admin/support/chat/${chatId}/inactive`), {
         method: 'PATCH'
       });
       if (res.ok) {
@@ -275,7 +275,7 @@ export function SupportManager({ user, onBadgeUpdate }: AdminSupportProps) {
   const handleSoftDeleteChat = async (chatId: number) => {
     if (!window.confirm('Are you absolutely sure you want to delete this support session? All messages will remain in database but hidden.')) return;
     try {
-      const res = await fetch(`/admin/support/chat/${chatId}`, {
+      const res = await fetch(supportUrl(`/admin/support/chat/${chatId}`), {
         method: 'DELETE'
       });
       if (res.ok) {
