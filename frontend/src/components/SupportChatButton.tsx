@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, X, Send, User, Mail, ShieldAlert, Check, CheckCheck } from 'lucide-react';
+import { MessageSquare, X, Send, User, Mail, ShieldAlert, Check, CheckCheck, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { getSupportErrorMessage, supportUrl, supportWsUrl } from '../services/supportService';
 
 interface SupportChatButtonProps {
   user: any;
@@ -34,6 +35,9 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
@@ -43,7 +47,7 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
   useEffect(() => {
     const fetchSupportStatus = async () => {
       try {
-        const res = await fetch('/support/status');
+        const res = await fetch(supportUrl('/support/status'));
         if (res.ok) {
           const data = await res.json();
           setIsSupportOnline(!!data.support_online);
@@ -82,19 +86,23 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
   const initializeChat = async (chatId: number) => {
     setActiveChatId(chatId);
     setIsLoadingHistory(true);
+    setChatError('');
     
     // Load history
     try {
-      const res = await fetch(`/support/chat/${chatId}/messages`);
+      const res = await fetch(supportUrl(`/support/chat/${chatId}/messages`));
       if (res.ok) {
         const history: Message[] = await res.json();
         setMessages(history);
         
         // Mark messages as read by user
-        await fetch(`/support/chat/${chatId}/read?sender_type=user`, { method: 'PATCH' });
+        await fetch(supportUrl(`/support/chat/${chatId}/read?sender_type=user`), { method: 'PATCH' });
+      } else {
+        setChatError(await getSupportErrorMessage(res, 'Could not load the conversation.'));
       }
     } catch (err) {
       console.error('Error fetching chat history:', err);
+      setChatError('Support chat is temporarily unavailable. Please try again in a moment.');
     } finally {
       setIsLoadingHistory(false);
     }
@@ -104,9 +112,14 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
       wsRef.current.close();
     }
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${wsProtocol}://${window.location.host}/ws/support/${chatId}`;
+    setIsSocketConnected(false);
+    const wsUrl = supportWsUrl(`/ws/support/${chatId}`);
     const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      setIsSocketConnected(true);
+      setChatError('');
+    };
 
     ws.onmessage = async (event) => {
       try {
@@ -122,7 +135,7 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
 
             // Mark received merchant replies as read instantly
             if (newMsg.sender_type === 'agent') {
-              await fetch(`/support/chat/${chatId}/read?sender_type=user`, { method: 'PATCH' });
+              await fetch(supportUrl(`/support/chat/${chatId}/read?sender_type=user`), { method: 'PATCH' });
             }
           }
         }
@@ -132,26 +145,26 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
     };
 
     ws.onclose = () => {
+      setIsSocketConnected(false);
       console.log(`WebSocket closed for chat ${chatId}`);
+    };
+
+    ws.onerror = () => {
+      setChatError('Live connection is not ready yet. Reopen the chat or try again shortly.');
     };
 
     wsRef.current = ws;
   };
 
-  // Trigger when opening the support widget
-  const handleToggleOpen = async () => {
-    if (isOpen) {
-      setIsOpen(false);
-      return;
-    }
-
-    setIsOpen(true);
+  const startSupportChat = async () => {
+    setChatError('');
 
     // If authenticated user
     if (user && user.id) {
+      setIsStartingChat(true);
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/support/chat', {
+        const res = await fetch(supportUrl('/support/chat'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -162,10 +175,14 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
           const chat = await res.json();
           initializeChat(chat.id);
         } else {
+          setChatError(await getSupportErrorMessage(res, 'Failed to start support chat.'));
           console.error('Failed to initialize authenticated support chat');
         }
       } catch (err) {
+        setChatError('Support chat is temporarily unavailable. Please try again in a moment.');
         console.error('Failed to register support chat for authenticated user:', err);
+      } finally {
+        setIsStartingChat(false);
       }
     } else {
       // If guest user, check local storage
@@ -177,6 +194,17 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
         setShowGuestModal(true);
       }
     }
+  };
+
+  // Trigger when opening the support widget
+  const handleToggleOpen = async () => {
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+
+    setIsOpen(true);
+    await startSupportChat();
   };
 
   // Register Guest Support Chat
@@ -191,7 +219,7 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
     setSubmittingGuest(true);
 
     try {
-      const res = await fetch('/support/guest/chat', {
+      const res = await fetch(supportUrl('/support/guest/chat'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -203,8 +231,7 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Guest registration failed');
+        throw new Error(await getSupportErrorMessage(res, 'Guest registration failed'));
       }
 
       const chat = await res.json();
@@ -233,6 +260,7 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
       setInputMessage('');
     } else {
       console.warn('WebSocket connection is not open. Re-connecting...');
+      setChatError('Reconnecting to support...');
       initializeChat(activeChatId).then(() => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
@@ -347,14 +375,15 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
         )}
       </AnimatePresence>
 
-      {/* Main Chat Drawer */}
+      {/* Main Chat Modal */}
       <AnimatePresence>
-        {isOpen && !showGuestModal && activeChatId && (
+        {isOpen && !showGuestModal && (activeChatId || isStartingChat || chatError) && (
+          <div className="fixed inset-0 z-40 flex items-end justify-end bg-black/20 p-3 sm:p-5">
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="fixed bottom-24 right-5 z-40 w-[380px] h-[550px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
+            className="w-full sm:w-[380px] h-[min(620px,calc(100vh-7rem))] bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
           >
             {/* ChatHeader Component inline */}
             <div className="px-5 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
@@ -365,9 +394,9 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
                 <div>
                   <h4 className="text-sm font-bold text-gray-900">NewsHub Support</h4>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={cn("w-2 h-2 rounded-full", isSupportOnline ? "bg-emerald-500" : "bg-gray-400")} />
+                    <span className={cn("w-2 h-2 rounded-full", isSocketConnected ? "bg-emerald-500" : isSupportOnline ? "bg-amber-400" : "bg-gray-400")} />
                     <span className="text-[11px] font-semibold text-gray-500">
-                      {isSupportOnline ? 'Support Online' : 'Support Offline'}
+                      {isSocketConnected ? 'Connected' : isSupportOnline ? 'Support Online' : 'Support Offline'}
                     </span>
                   </div>
                 </div>
@@ -383,7 +412,23 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
 
             {/* MessagesList Component inline */}
             <div className="flex-1 overflow-y-auto px-5 py-4 bg-[#f8fafc] space-y-3.5">
-              {isLoadingHistory ? (
+              {isStartingChat ? (
+                <div className="h-full flex flex-col items-center justify-center text-center px-6">
+                  <Loader2 className="w-7 h-7 text-blue-600 animate-spin mb-3" />
+                  <p className="text-sm font-semibold text-gray-600">Opening support chat...</p>
+                </div>
+              ) : chatError && !activeChatId ? (
+                <div className="h-full flex flex-col items-center justify-center text-center px-6">
+                  <ShieldAlert className="w-8 h-8 text-red-500 mb-3" />
+                  <p className="text-sm font-semibold text-gray-700">{chatError}</p>
+                  <button
+                    onClick={startSupportChat}
+                    className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : isLoadingHistory ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="animate-pulse flex flex-col items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gray-200" />
@@ -432,6 +477,13 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
               <div ref={messagesEndRef} />
             </div>
 
+            {chatError && activeChatId && (
+              <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-xs font-semibold text-amber-700 flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                <span>{chatError}</span>
+              </div>
+            )}
+
             {/* MessageInput Component inline */}
             <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-100 flex gap-2 items-center">
               <input
@@ -440,17 +492,19 @@ export default function SupportChatButton({ user, currentPage }: SupportChatButt
                 placeholder="Type your message..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
+                disabled={!activeChatId}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-blue-500 transition-all text-sm outline-hidden font-medium text-gray-800"
               />
               <button
                 type="submit"
-                disabled={!inputMessage.trim()}
+                disabled={!inputMessage.trim() || !activeChatId}
                 className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-100 transition-all active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:scale-100 disabled:shadow-none"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
           </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>
