@@ -8,6 +8,7 @@ import About from './pages/About';
 import Donate from './pages/Donate';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import SupportChatButton from './components/SupportChatButton';
 import { Article, User } from './types';
 import { authService } from './services/authService';
 import { newsService } from './services/newsService';
@@ -152,6 +153,8 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      <SupportChatButton user={user} currentPage={currentPage} />
     </div>
   );
 }
