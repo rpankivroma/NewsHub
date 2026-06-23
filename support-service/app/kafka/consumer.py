@@ -1,8 +1,10 @@
+import os
 import json
 import logging
 import asyncio
 from aiokafka import AIOKafkaConsumer
 from ..config import settings
+from .ssl_helper import get_kafka_ssl_context
 
 logger = logging.getLogger("kafka_consumer")
 
@@ -11,6 +13,7 @@ class KafkaConsumerManager:
         self.consumer = None
         self._running = False
         self._task = None
+        self._temp_files = []
 
     async def start(self):
         if self._running:
@@ -18,6 +21,16 @@ class KafkaConsumerManager:
         self._running = True
         self._task = asyncio.create_task(self._consume_loop())
         logger.info("Kafka Consumer background task initiated.")
+
+    def _cleanup_temp_files(self):
+        for path in self._temp_files:
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+                    logger.info(f"Cleaned up temporary cert file: {path}")
+            except Exception as ex:
+                logger.warning(f"Failed to clean up temporary cert file {path}: {ex}")
+        self._temp_files = []
 
     async def stop(self):
         self._running = False
@@ -35,6 +48,7 @@ class KafkaConsumerManager:
                 logger.error(f"Error while stopping AIOKafkaConsumer: {e}")
             finally:
                 self.consumer = None
+        self._cleanup_temp_files()
         logger.info("Kafka Consumer stopped.")
 
     async def _consume_loop(self):
@@ -45,12 +59,24 @@ class KafkaConsumerManager:
         
         while self._running:
             try:
+                ssl_context, temp_files = get_kafka_ssl_context()
+                self._temp_files = temp_files
+                
+                kwargs = {
+                    "bootstrap_servers": bootstrap_servers,
+                    "group_id": "support-group",
+                    "value_deserializer": lambda x: json.loads(x.decode('utf-8')),
+                    "auto_offset_reset": "earliest"
+                }
+
+                if ssl_context:
+                    kwargs["security_protocol"] = "SSL"
+                    kwargs["ssl_context"] = ssl_context
+                    logger.info("Kafka Consumer SSL context applied.")
+
                 self.consumer = AIOKafkaConsumer(
                     *topics,
-                    bootstrap_servers=bootstrap_servers,
-                    group_id="support-group",
-                    value_deserializer=lambda x: json.loads(x.decode('utf-8')),
-                    auto_offset_reset="earliest"
+                    **kwargs
                 )
                 await self.consumer.start()
                 logger.info(f"Kafka Consumer connected successfully to {bootstrap_servers}")
@@ -68,6 +94,7 @@ class KafkaConsumerManager:
                         await self.handle_message_read(payload)
                         
             except asyncio.CancelledError:
+                self._cleanup_temp_files()
                 break
             except Exception as e:
                 logger.error(f"Kafka Consumer connection error: {e}. Re-attempting connection in 10 seconds...")
@@ -77,6 +104,7 @@ class KafkaConsumerManager:
                     except Exception:
                         pass
                     self.consumer = None
+                self._cleanup_temp_files()
                 await asyncio.sleep(10)
 
     async def handle_message_sent(self, payload: dict):
